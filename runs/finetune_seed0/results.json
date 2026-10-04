@@ -1,0 +1,91 @@
+{
+  "mode": "finetune",
+  "seed": 0,
+  "epochs": 5,
+  "lr": 0.0001,
+  "batch_size": 32,
+  "best_val_acc": 0.907608695652174,
+  "test_top1": 0.884709730171709,
+  "test_top5": 0.9880076315072227,
+  "history": [
+    {
+      "epoch": 1,
+      "train_loss": 1.6818383051001506,
+      "train_acc": 0.643542199488491,
+      "val_loss": 0.7355165412460548,
+      "val_acc": 0.855072463768116,
+      "val_top5": 0.9927536231884058
+    },
+    {
+      "epoch": 2,
+      "train_loss": 0.49195926421133757,
+      "train_acc": 0.9104859335038363,
+      "val_loss": 0.458528951458309,
+      "val_acc": 0.8894927536231884,
+      "val_top5": 0.9891304347826086
+    },
+    {
+      "epoch": 3,
+      "train_loss": 0.2580164223909378,
+      "train_acc": 0.9568414322250639,
+      "val_loss": 0.37920616588730743,
+      "val_acc": 0.9057971014492754,
+      "val_top5": 0.9909420289855072
+    },
+    {
+      "epoch": 4,
+      "train_loss": 0.1536814183606516,
+      "train_acc": 0.9769820971867008,
+      "val_loss": 0.3453516713950945,
+      "val_acc": 0.907608695652174,
+      "val_top5": 0.9909420289855072
+    },
+    {
+      "epoch": 5,
+      "train_loss": 0.09378479990889044,
+      "train_acc": 0.989769820971867,
+      "val_loss": 0.34469090898831684,
+      "val_acc": 0.894927536231884,
+      "val_top5": 0.9909420289855072
+    }
+  ],
+  "classes": [
+    "Abyssinian",
+    "American Bulldog",
+    "American Pit Bull Terrier",
+    "Basset Hound",
+    "Beagle",
+    "Bengal",
+    "Birman",
+    "Bombay",
+    "Boxer",
+    "British Shorthair",
+    "Chihuahua",
+    "Egyptian Mau",
+    "English Cocker Spaniel",
+    "English Setter",
+    "German Shorthaired",
+    "Great Pyrenees",
+    "Havanese",
+    "Japanese Chin",
+    "Keeshond",
+    "Leonberger",
+    "Maine Coon",
+    "Miniature Pinscher",
+    "Newfoundland",
+    "Persian",
+    "Pomeranian",
+    "Pug",
+    "Ragdoll",
+    "Russian Blue",
+    "Saint Bernard",
+    "Samoyed",
+    "Scottish Terrier",
+    "Shiba Inu",
+    "Siamese",
+    "Sphynx",
+    "Staffordshire Bull Terrier",
+    "Wheaten Terrier",
+    "Yorkshire Terrier"
+  ]
+}
