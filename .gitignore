@@ -2,3 +2,5 @@
 data/
 runs/**/model.pt
 __pycache__/
+**/model.pt
+.DS_Store
