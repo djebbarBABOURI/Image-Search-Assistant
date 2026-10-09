@@ -2,10 +2,15 @@
 .venv/
 __pycache__/
 *.pyc
+.pytest_cache/
+*.egg-info/
 
 # Fichiers lourds ou générés
-model.pt
-images/
+models/*.pt
+data/images/
 
 # Local
 .env
+.vscode/
+.idea/
+.DS_Store
