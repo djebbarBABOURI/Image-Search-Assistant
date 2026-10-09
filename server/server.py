@@ -46,7 +46,7 @@ def species(name: str) -> str:
  
 def load_model() -> torch.nn.Module:
     if not MODEL_PATH.exists():
-        raise SystemExit(f"Modèle introuvable : {MODEL_PATH} (variable PETS_MODEL)")
+        raise FileNotFoundError(f"Modèle introuvable : {MODEL_PATH} (variable PETS_MODEL)")
     m = models.resnet18(num_classes=len(CLASSES))
     m.load_state_dict(torch.load(MODEL_PATH, map_location="cpu", weights_only=True))
     return m.eval()
@@ -58,10 +58,31 @@ def init() -> None:
     S["files"] = {p.stem: p for p in files}
     log.info("Modèle chargé (%d classes), %d images dans %s", len(CLASSES), len(files), IMAGES_DIR)
 
+def ensure_init() -> None:
+    if not S:
+        init()
 
 @mcp.tool()
 def classify(image_id: str, top_k: int = 3) -> dict:
     """Predict the breed of an image and give the top probabilities."""
+    log.info("classify appelé avec %s", image_id)
+    ensure_init()
+    path = S["files"].get(Path(image_id).stem)
+    if path is None:
+        return {"error": f"Image inconnue : {image_id}"}
+
+    x = TF(Image.open(path).convert("RGB")).unsqueeze(0)
+    with torch.no_grad():
+        probs = torch.softmax(S["model"](x)[0], dim=0)
+
+    p, idx = probs.topk(max(1, min(top_k, len(CLASSES))))
+    return {
+        "image_id": path.stem,
+        "predictions": [
+            {"label": CLASSES[i], "species": species(CLASSES[i]), "probability": round(float(v), 4)}
+            for v, i in zip(p, idx)
+        ],
+    }
 
 
 @mcp.tool()
