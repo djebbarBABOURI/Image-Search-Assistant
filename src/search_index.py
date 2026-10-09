@@ -1,10 +1,10 @@
 import json
 from pathlib import Path
 
+import numpy as np
 import torch
 from PIL import Image
 from torchvision import models, transforms
-
 EXTS = {".jpg", ".jpeg", ".png"}
 
 DEFAULT_CLASSES = [
@@ -23,6 +23,10 @@ TF = transforms.Compose([
     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
 ])
 
+def probs_for(model, path):
+    with torch.no_grad():
+        x = TF(Image.open(path).convert("RGB")).unsqueeze(0)
+        return torch.softmax(model(x), dim=1)[0].numpy()
 
 def load_classes(classes_path: Path) -> list[str]:
     return json.loads(classes_path.read_text()) if classes_path.exists() else DEFAULT_CLASSES
@@ -54,3 +58,13 @@ def predict(model: torch.nn.Module, path: Path, classes: list[str], top_k: int =
         {"label": classes[i], "species": species(classes[i]), "probability": round(float(v), 4)}
         for v, i in zip(p, idx)
     ]
+
+def probs_batch(model, paths, batch_size=32, on_progress=None):
+    out = []
+    for i in range(0, len(paths), batch_size):
+        batch = torch.stack([TF(Image.open(p).convert("RGB")) for p in paths[i:i + batch_size]])
+        with torch.no_grad():
+            out.append(torch.softmax(model(batch), dim=1).numpy())
+        if on_progress:
+            on_progress(min(i + batch_size, len(paths)), len(paths))
+    return np.concatenate(out)
