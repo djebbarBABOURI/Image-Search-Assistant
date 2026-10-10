@@ -3,3 +3,4 @@ mcp
 Pillow
 torch
 torchvision
+numpy

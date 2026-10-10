@@ -7,6 +7,7 @@ Serveur [MCP](https://modelcontextprotocol.io/) de classification d'images basé
 - [Prérequis](#prérequis)
 - [Installation](#installation)
 - [Télécharger les images](#télécharger-les-images)
+- [Construire le cache](#construire-le-cache)
 - [Lancement](#lancement)
 - [Structure du projet](#structure-du-projet)
 
@@ -36,6 +37,16 @@ Remove-Item data\images.tar.gz
 
 Les images se retrouvent dans `data/images/`.
 
+## Construire le cache
+
+Le serveur lit les prédictions dans `models/pets_cache.npz`. Ce fichier se génère une seule fois, depuis la racine du projet :
+
+```powershell
+uv run --with-requirements requirements.txt python tools/build_cache.py
+```
+
+Le calcul prend quelques minutes sur CPU. Relancez cette commande si vous changez de modèle ou si le contenu de `data/images/` change (supprimez d'abord `models/pets_cache.npz`).
+
 ## Lancement
 
 Depuis la racine du projet :
@@ -58,13 +69,14 @@ uv run --with-requirements requirements.txt python -m src.mcp_server.server
 
 Ouvrez ensuite dans le navigateur le lien `http://localhost:6274/?MCP_PROXY_AUTH_TOKEN=...` affiché dans le terminal. Le token change à chaque démarrage. `Ctrl+C` arrête le serveur.
 
+Le cache doit exister avant le premier lancement (voir « #construire-le-cache »).
 
 ## Structure du projet
 
 ```
 image-search-assistant/
 ├── data/images/           images (non versionnées)
-├── models/                model.pt (non versionné), classes.json
+├── models/                model.pt, pets_cache.npz (non versionnés)
 ├── src/
 │   ├── search_index.py    chargement du modèle, images, prédiction
 │   ├── mcp_server/        serveur MCP
