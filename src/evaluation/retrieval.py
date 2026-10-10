@@ -43,3 +43,21 @@ def knn(features: np.ndarray, query_idx: np.ndarray, gallery_idx: np.ndarray,
         all_idx.append(gallery_idx[top])
         all_sim.append(np.take_along_axis(sim, top, 1))
     return np.concatenate(all_idx), np.concatenate(all_sim)
+
+def precision_at_k(labels: np.ndarray, query_idx: np.ndarray, neighbors: np.ndarray,
+                   ks=(1, 5, 10)) -> dict[str, float]:
+    hits = labels[neighbors] == labels[query_idx][:, None]
+    return {f"p@{k}": float(hits[:, :k].mean()) for k in ks if k <= neighbors.shape[1]}
+
+
+def evaluate_retrieval(features: np.ndarray, labels: np.ndarray, split: np.ndarray,
+                       ks=(1, 5, 10), galleries=GALLERIES, metrics=("cosine", "euclid")) -> dict:
+    q = np.where(split == "test")[0]
+    out = {}
+    for gal in galleries:
+        gi = gallery_indices(split, gal)
+        out[gal] = {}
+        for met in metrics:
+            nb, _ = knn(features, q, gi, max(ks), met)
+            out[gal][met] = precision_at_k(labels, q, nb, ks)
+    return out
