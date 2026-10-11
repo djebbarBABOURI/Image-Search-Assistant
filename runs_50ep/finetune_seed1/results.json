@@ -1,0 +1,209 @@
+{
+  "mode": "finetune",
+  "seed": 1,
+  "epochs": 50,
+  "lr": 0.0001,
+  "weight_decay": 0.01,
+  "scheduler": "cosine",
+  "patience": 10,
+  "batch_size": 32,
+  "best_val_acc": 0.9239130434782609,
+  "best_epoch": 7,
+  "stopped_epoch": 17,
+  "test_top1": 0.883892068683565,
+  "test_top5": 0.9871899700190788,
+  "history": [
+    {
+      "epoch": 1,
+      "lr": 0.0001,
+      "train_loss": 1.9320906557695334,
+      "train_acc": 0.5767263427109974,
+      "val_loss": 0.7330573546713677,
+      "val_acc": 0.8605072463768116,
+      "val_top5": 0.9855072463768116
+    },
+    {
+      "epoch": 2,
+      "lr": 9.990133642141359e-05,
+      "train_loss": 0.7486269425248246,
+      "train_acc": 0.8366368286445013,
+      "val_loss": 0.5228096989617832,
+      "val_acc": 0.875,
+      "val_top5": 0.9836956521739131
+    },
+    {
+      "epoch": 3,
+      "lr": 9.96057350657239e-05,
+      "train_loss": 0.4991632818870837,
+      "train_acc": 0.8839514066496164,
+      "val_loss": 0.40762737566146295,
+      "val_acc": 0.8967391304347826,
+      "val_top5": 0.9891304347826086
+    },
+    {
+      "epoch": 4,
+      "lr": 9.911436253643444e-05,
+      "train_loss": 0.3576662638760589,
+      "train_acc": 0.9213554987212276,
+      "val_loss": 0.34759636720021564,
+      "val_acc": 0.9021739130434783,
+      "val_top5": 0.9927536231884058
+    },
+    {
+      "epoch": 5,
+      "lr": 9.842915805643155e-05,
+      "train_loss": 0.28121330850112164,
+      "train_acc": 0.9414961636828645,
+      "val_loss": 0.3593791075374769,
+      "val_acc": 0.907608695652174,
+      "val_top5": 0.9927536231884058
+    },
+    {
+      "epoch": 6,
+      "lr": 9.755282581475769e-05,
+      "train_loss": 0.22542322299364584,
+      "train_acc": 0.9520460358056266,
+      "val_loss": 0.3262409464172695,
+      "val_acc": 0.9057971014492754,
+      "val_top5": 0.9945652173913043
+    },
+    {
+      "epoch": 7,
+      "lr": 9.648882429441257e-05,
+      "train_loss": 0.18460984280347215,
+      "train_acc": 0.9632352941176471,
+      "val_loss": 0.28856931605200836,
+      "val_acc": 0.9239130434782609,
+      "val_top5": 0.9945652173913043
+    },
+    {
+      "epoch": 8,
+      "lr": 9.524135262330098e-05,
+      "train_loss": 0.16687105733262914,
+      "train_acc": 0.9645140664961637,
+      "val_loss": 0.314207051543222,
+      "val_acc": 0.9094202898550725,
+      "val_top5": 0.9945652173913043
+    },
+    {
+      "epoch": 9,
+      "lr": 9.381533400219317e-05,
+      "train_loss": 0.15517148348833898,
+      "train_acc": 0.9638746803069054,
+      "val_loss": 0.33968787780706433,
+      "val_acc": 0.9021739130434783,
+      "val_top5": 0.9945652173913043
+    },
+    {
+      "epoch": 10,
+      "lr": 9.221639627510075e-05,
+      "train_loss": 0.12671591337684476,
+      "train_acc": 0.9718670076726342,
+      "val_loss": 0.2905001450276029,
+      "val_acc": 0.9166666666666666,
+      "val_top5": 0.9927536231884058
+    },
+    {
+      "epoch": 11,
+      "lr": 9.045084971874735e-05,
+      "train_loss": 0.11692639055383175,
+      "train_acc": 0.9747442455242967,
+      "val_loss": 0.3111433326334193,
+      "val_acc": 0.9112318840579711,
+      "val_top5": 0.9927536231884058
+    },
+    {
+      "epoch": 12,
+      "lr": 8.852566213878945e-05,
+      "train_loss": 0.11761467463677497,
+      "train_acc": 0.975383631713555,
+      "val_loss": 0.3072047276773315,
+      "val_acc": 0.9094202898550725,
+      "val_top5": 0.9909420289855072
+    },
+    {
+      "epoch": 13,
+      "lr": 8.644843137107056e-05,
+      "train_loss": 0.10975222794524848,
+      "train_acc": 0.9709079283887468,
+      "val_loss": 0.3132981562959975,
+      "val_acc": 0.9039855072463768,
+      "val_top5": 0.9927536231884058
+    },
+    {
+      "epoch": 14,
+      "lr": 8.422735529643442e-05,
+      "train_loss": 0.08630114974801803,
+      "train_acc": 0.9820971867007673,
+      "val_loss": 0.30500589116759924,
+      "val_acc": 0.9112318840579711,
+      "val_top5": 0.9909420289855072
+    },
+    {
+      "epoch": 15,
+      "lr": 8.187119948743447e-05,
+      "train_loss": 0.09169971187363195,
+      "train_acc": 0.9766624040920716,
+      "val_loss": 0.30942410360211914,
+      "val_acc": 0.9094202898550725,
+      "val_top5": 0.9909420289855072
+    },
+    {
+      "epoch": 16,
+      "lr": 7.938926261462366e-05,
+      "train_loss": 0.0811339192416357,
+      "train_acc": 0.9830562659846548,
+      "val_loss": 0.34884739310845087,
+      "val_acc": 0.8931159420289855,
+      "val_top5": 0.9927536231884058
+    },
+    {
+      "epoch": 17,
+      "lr": 7.679133974894982e-05,
+      "train_loss": 0.07700052275262831,
+      "train_acc": 0.9820971867007673,
+      "val_loss": 0.3985124295172484,
+      "val_acc": 0.8913043478260869,
+      "val_top5": 0.9891304347826086
+    }
+  ],
+  "classes": [
+    "Abyssinian",
+    "American Bulldog",
+    "American Pit Bull Terrier",
+    "Basset Hound",
+    "Beagle",
+    "Bengal",
+    "Birman",
+    "Bombay",
+    "Boxer",
+    "British Shorthair",
+    "Chihuahua",
+    "Egyptian Mau",
+    "English Cocker Spaniel",
+    "English Setter",
+    "German Shorthaired",
+    "Great Pyrenees",
+    "Havanese",
+    "Japanese Chin",
+    "Keeshond",
+    "Leonberger",
+    "Maine Coon",
+    "Miniature Pinscher",
+    "Newfoundland",
+    "Persian",
+    "Pomeranian",
+    "Pug",
+    "Ragdoll",
+    "Russian Blue",
+    "Saint Bernard",
+    "Samoyed",
+    "Scottish Terrier",
+    "Shiba Inu",
+    "Siamese",
+    "Sphynx",
+    "Staffordshire Bull Terrier",
+    "Wheaten Terrier",
+    "Yorkshire Terrier"
+  ]
+}
