@@ -8,7 +8,7 @@ from mcp.server.mcpserver import MCPServer
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 import numpy as np
-from src.search_index import load_classes, load_model, list_images, predict, probs_for, species, probs_batch
+from src.search_index import load_classes, load_model, list_images, predict, probs_for, species, probs_batch, embs_and_probs_batch
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("pets-server")
@@ -39,21 +39,42 @@ def build_cache() -> None:
     files = list_images(IMAGES_DIR)
     ids = sorted(files)
     log.info("Calcul des prédictions pour %d images...", len(ids))
-    probs = probs_batch(model, [files[i] for i in ids],
-                        on_progress=lambda n, t: log.info("%d / %d", n, t) if n % 320 == 0 or n == t else None)
-    np.savez(CACHE_PATH, ids=np.array(ids), probs=probs)
+    embs, probs = embs_and_probs_batch(
+        model, [files[i] for i in ids],
+        on_progress=lambda n, t: log.info("%d / %d", n, t) if n % 320 == 0 or n == t else None)
+    np.savez(CACHE_PATH, ids=np.array(ids), probs=probs, embs=embs)
     log.info("Cache écrit : %s", CACHE_PATH)
 
+def top(probs, k: int) -> list[dict]:
+    k = max(1, min(k, len(CLASSES)))
+    return [{"label": CLASSES[j], "species": species(CLASSES[j]),
+             "probability": round(float(probs[j]), 4)}
+            for j in np.argsort(-probs)[:k]]
+
+def vec(image_id: str):
+    """Retourne (id, probs, embedding normalisé, index collection) ou None
+    si l'image n'est pas dans la collection."""
+    stem = Path(image_id).stem
+    i = S["pos"].get(stem)
+    if i is None:
+        return None
+    return stem, S["probs"][i], S["embs"][i], i
 
 def init() -> None:
     if not CACHE_PATH.exists():
         raise RuntimeError("Cache absent : lancez d'abord  uv run --with-requirements requirements.txt python tools/build_cache.py")
     d = np.load(CACHE_PATH)
-    S["model"] = load_model(MODEL_PATH, len(CLASSES))
-    S["files"] = list_images(IMAGES_DIR)
-    S["ids"] = list(d["ids"])
-    S["probs"] = d["probs"]
-    log.info("Modèle chargé (%d classes), %d images dans %s", len(CLASSES), len(S["ids"]), IMAGES_DIR)
+    ids = [str(i) for i in d["ids"]]
+    emb = d["embs"]
+    S.update(
+        model=load_model(MODEL_PATH, len(CLASSES)),
+        files=list_images(IMAGES_DIR),
+        ids=ids,
+        probs=d["probs"],
+        pos={s: i for i, s in enumerate(ids)},
+        embs=emb / np.linalg.norm(emb, axis=1, keepdims=True),
+    )
+    log.info("Modèle chargé (%d classes), %d images dans %s", len(CLASSES), len(ids), IMAGES_DIR)
 
 def ensure_init() -> None:
     if not S:
@@ -73,7 +94,22 @@ def classify(image_id: str, top_k: int = 3) -> dict:
 @mcp.tool()
 def find_similar(image_id: str, k: int = 5) -> dict:
     """Find the k images closest to a given image in the embedding space."""
+    ensure_init()
+    v = vec(image_id)
+    if v is None:
+        return {"error": f"Image inconnue : {image_id}"}
+    iid, _, emb, i = v
+    sims = S["embs"] @ emb
+    if i is not None:
+        sims[i] = -np.inf
+    out = []
+    for j in np.argsort(-sims)[:max(1, k)]:
+        best = top(S["probs"][j], 1)[0]
+        out.append({"image_id": S["ids"][j], "similarity": round(float(sims[j]), 4),
+                    "predicted_breed": best["label"], "confidence": best["probability"]})
+    return {"image_id": iid, "neighbors": out}
 
+  
 
 @mcp.tool()
 def filter_images(label: str, min_confidence: float = 0.0, limit: int = 10) -> dict:
@@ -108,6 +144,37 @@ def count_by(label: str = "", min_confidence: float = 0.0) -> dict:
 
 
 @mcp.tool()
+def top_confusions(label: str, k: int = 3) -> dict:
+    """For a given breed, list the breeds the model most often predicts instead (confusions), with example image ids."""
+    ensure_init()
+    c = class_of(label)
+    if c is None:
+        return {"error": f"Race inconnue : {label}. Voir la ressource pets://classes"}
+    pred = S["probs"].argmax(1)
+    conf = S["probs"].max(1)
+    members = [i for i, s in enumerate(S["ids"])
+           if true_label(s) == c]
+    if not members:
+        return {"error": f"Aucune image étiquetée {CLASSES[c]} (nom de fichier) dans la collection"}
+    wrong = [i for i in members if pred[i] != c]
+    by_class: dict[int, list[int]] = {}
+    for i in wrong:
+        by_class.setdefault(int(pred[i]), []).append(i)
+    ranked = sorted(by_class.items(), key=lambda kv: -len(kv[1]))[:max(1, k)]
+    return {
+        "label": CLASSES[c],
+        "total_images": len(members),
+        "misclassified": len(wrong),
+        "error_rate": round(len(wrong) / len(members), 4),
+        "confused_with": [
+            {"predicted_breed": CLASSES[j], "count": len(img_idx),
+            "examples": [{"image_id": S["ids"][k_], "confidence": round(float(conf[k_]), 4)}
+                        for k_ in sorted(img_idx, key=lambda n: -conf[n])[:3]]}
+            for j, img_idx in ranked
+        ],
+    }
+
+@mcp.tool()
 def list_breeds() -> dict:
     """List the 37 valid breed names with their species (cat or dog)."""
     return {"count": len(CLASSES),
@@ -139,13 +206,33 @@ def stats_resource() -> str:
 @mcp.resource("pets://metrics")
 def metrics_resource() -> str:
     """Expose the evaluation metrics of the trained model."""
-
+    
 
 @mcp.resource("pets://image/{image_id}")
 def image_resource(image_id: str) -> str:
     """Expose the summary of one image of the collection."""
 
-
+@mcp.resource("pets://breed/{label}")
+def breed_resource(label: str) -> str:
+    """Expose a summary of one breed: predictions count, accuracy, mean confidence."""
+    ensure_init()
+    c = class_of(label)
+    if c is None:
+        return f"Race inconnue : {label}. Voir pets://classes"
+    pred, conf = S["probs"].argmax(1), S["probs"].max(1)
+    predicted = pred == c
+    members = np.array([i for i, s in enumerate(S["ids"]) if true_label(s) == c], dtype=int)
+    lines = [
+        f"Race : {CLASSES[c]} ({species(CLASSES[c])})",
+        f"Images prédites comme {CLASSES[c]} : {int(predicted.sum())}",
+        f"Confiance moyenne sur ces prédictions : "
+        f"{(conf[predicted].mean() if predicted.any() else 0):.3f}",
+        f"Images étiquetées {CLASSES[c]} : {len(members)}",
+    ]
+    if len(members):
+        lines.append(f"Accuracy sur cette race : {float((pred[members] == c).mean()):.3f}")
+    return "\n".join(lines)
+ 
 @mcp.prompt()
 def find_look_alikes(image_id: str) -> str:
     """Build a prompt asking for the neighbours of an image and their breeds."""

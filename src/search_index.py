@@ -68,3 +68,23 @@ def probs_batch(model, paths, batch_size=32, on_progress=None):
         if on_progress:
             on_progress(min(i + batch_size, len(paths)), len(paths))
     return np.concatenate(out)
+
+def embs_and_probs_batch(model, paths, batch_size=32, on_progress=None):
+    """Retourne (embeddings 512-d, probabilités) pour une liste d'images (resnet18)."""
+    feats = {}
+    hook = model.avgpool.register_forward_hook(
+        lambda m, i, o: feats.__setitem__("x", o.flatten(1).numpy())
+    )
+    embs, probs = [], []
+    try:
+        for i in range(0, len(paths), batch_size):
+            batch = torch.stack([TF(Image.open(p).convert("RGB")) for p in paths[i:i + batch_size]])
+            with torch.no_grad():
+                logits = model(batch)
+            probs.append(torch.softmax(logits, dim=1).numpy())
+            embs.append(feats["x"].copy())
+            if on_progress:
+                on_progress(min(i + batch_size, len(paths)), len(paths))
+    finally:
+        hook.remove()
+    return np.concatenate(embs), np.concatenate(probs)
