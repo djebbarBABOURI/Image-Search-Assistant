@@ -317,4 +317,4 @@ def breed_report(label: str) -> str:
 
 if __name__ == "__main__":
     init()
-    mcp.run()
+    mcp.run(transport="streamable-http")

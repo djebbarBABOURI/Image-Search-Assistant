@@ -9,6 +9,7 @@ Serveur [MCP](https://modelcontextprotocol.io/) de classification d'images basé
 - [Télécharger les images](#télécharger-les-images)
 - [Construire le cache](#construire-le-cache)
 - [Lancement](#lancement)
+- [Outils, ressources et prompts MCP](#outils-ressources-et-prompts-mcp)
 - [Structure du projet](#structure-du-projet)
 
 ## Prérequis
@@ -49,27 +50,78 @@ Le calcul prend quelques minutes sur CPU. Relancez cette commande si vous change
 
 ## Lancement
 
-Depuis la racine du projet :
+### Mode 1 : MCP Inspector (tester les outils)
 
 ```powershell
 .\run.ps1
 ```
 
-Équivalent à :
+Ouvrez le lien `http://localhost:6274/?MCP_PROXY_AUTH_TOKEN=...` affiché dans le terminal (le token change à chaque démarrage). `Ctrl+C` arrête le serveur.
+
+### Mode 2 : serveur HTTP
+
+Le serveur écoute sur `http://localhost:8000/mcp`.
 
 ```powershell
-uv run --with-requirements requirements.txt mcp dev src/mcp_server/server.py
+.\run_server.ps1
 ```
 
-Pour lancer le serveur sans l'inspecteur :
+avec `run_server.ps1` :
 
 ```powershell
-uv run --with-requirements requirements.txt python -m src.mcp_server.server
+Set-Location $PSScriptRoot
+uv run --with-requirements requirements.txt python src/mcp_server/server.py
 ```
 
-Ouvrez ensuite dans le navigateur le lien `http://localhost:6274/?MCP_PROXY_AUTH_TOKEN=...` affiché dans le terminal. Le token change à chaque démarrage. `Ctrl+C` arrête le serveur.
+Le cache doit exister avant le premier lancement (voir [Construire le cache](#construire-le-cache)).
 
-Le cache doit exister avant le premier lancement (voir « #construire-le-cache »).
+### Mode 3 : chatbot (client web)
+
+Le client relie le serveur MCP à un LLM local via Ollama et sert une interface web. Ce mode nécessite le **Mode 2** : le serveur HTTP doit déjà tourner.
+
+Il faut 3 processus, chacun dans son terminal :
+
+1. **Ollama** : `ollama serve`
+2. **Serveur MCP** : `.\run_server.ps1`
+3. **Client** : `.\run_client.ps1`
+
+avec `run_client.ps1` :
+
+```powershell
+Set-Location $PSScriptRoot
+uv run --with-requirements requirements.txt --with fastapi --with uvicorn --with httpx python src/chatbot/client.py
+```
+
+Ouvrez ensuite http://localhost:8080.
+
+## Outils, ressources et prompts MCP
+
+### Outils
+
+| Outil | Description |
+|---|---|
+| `classify(image_id, top_k)` | Prédit la race d'une image et renvoie les meilleures probabilités |
+| `find_similar(image_id, k)` | Trouve les k images les plus proches dans l'espace des embeddings |
+| `filter_images(label, min_confidence, limit)` | Liste les images prédites comme une race donnée |
+| `count_by(label, min_confidence)` | Compte les images par race prédite |
+| `top_confusions(label, k)` | Races les plus souvent confondues avec la race donnée |
+| `list_breeds()` | Liste les 37 races et leur espèce |
+
+### Ressources
+
+| URI | Contenu |
+|---|---|
+| `pets://classes` | Les 37 races |
+| `pets://stats` | Statistiques générales de la collection |
+| `pets://metrics` | Accuracy globale du modèle |
+| `pets://image/{image_id}` | Résumé d'une image |
+| `pets://breed/{label}` | Résumé d'une race |
+
+### Prompts
+
+`find_look_alikes`, `identify_image`, `analyze_confusions`, `audit_low_confidence`, `breed_report`.
+
+ Les identifiants d'images sont les noms de fichier sans extension (ex. `Abyssinian_1`). La race « réelle » est déduite du nom de fichier.
 
 ## Structure du projet
 
@@ -87,3 +139,5 @@ image-search-assistant/
 ├── tools/                 scripts utilitaires
 ├── requirements.txt
 └── run.ps1
+├── run_client.ps1
+└── run_server.ps1
