@@ -206,11 +206,37 @@ def stats_resource() -> str:
 @mcp.resource("pets://metrics")
 def metrics_resource() -> str:
     """Expose the evaluation metrics of the trained model."""
+    ensure_init()
+    pred = S["probs"].argmax(1)
+    pairs = [(i, true_label(s)) for i, s in enumerate(S["ids"])]
+    pairs = [(i, t) for i, t in pairs if t is not None]
+    idx = np.array([i for i, _ in pairs])
+    truth = np.array([t for _, t in pairs])
+    acc = float((pred[idx] == truth).mean())
+    return f"Accuracy globale : {acc:.3f} sur {len(idx)} images étiquetées"
     
 
 @mcp.resource("pets://image/{image_id}")
 def image_resource(image_id: str) -> str:
     """Expose the summary of one image of the collection."""
+    ensure_init()
+    stem = Path(image_id).stem
+    i = S["pos"].get(stem)
+    if i is None:
+        return f"Image inconnue : {image_id}"
+    t = true_label(stem)
+    preds = top(S["probs"][i], 3)
+    lines = [
+        f"Image : {stem}",
+        f"Fichier : {S['files'].get(stem)}",
+        f"Race (nom de fichier) : {CLASSES[t] if t is not None else 'inconnue'}",
+        f"Race prédite : {preds[0]['label']} ({preds[0]['species']}) "
+        f"avec une confiance de {preds[0]['probability']:.3f}",
+    ]
+    if t is not None:
+        lines.append("Prédiction correcte : " + ("oui" if CLASSES[t] == preds[0]["label"] else "non"))
+    lines.append("Top 3 : " + ", ".join(f"{p['label']} ({p['probability']:.3f})" for p in preds))
+    return "\n".join(lines)
 
 @mcp.resource("pets://breed/{label}")
 def breed_resource(label: str) -> str:
@@ -243,6 +269,51 @@ def find_look_alikes(image_id: str) -> str:
         "voisins ont la même race que l'image de départ."
     )
 
+@mcp.prompt()
+def identify_image(image_id: str) -> str:
+    """Build a prompt to identify an image and explain how reliable the prediction is."""
+    return (
+        f"Appelle classify sur {image_id} avec top_k=5, et lis la ressource "
+        f"pets://image/{image_id}. Dis quelle est la race la plus probable, "
+        "si c'est un chat ou un chien, et si la prédiction est fiable "
+        "(confiance, écart avec la 2e race). Si la confiance est faible, "
+        "utilise find_similar pour appuyer ton analyse."
+    )
+ 
+ 
+@mcp.prompt()
+def analyze_confusions(label: str) -> str:
+    """Build a prompt to analyse the confusions of the model on one breed."""
+    return (
+        f"Appelle top_confusions pour la race {label} avec k=3. "
+        "Pour chaque race confondue, explique pourquoi les deux races peuvent "
+        "se ressembler visuellement. Consulte pets://breed/" + label +
+        " pour comparer avec la précision globale, puis propose des pistes "
+        "pour améliorer le modèle sur cette race."
+    )
+ 
+ 
+@mcp.prompt()
+def audit_low_confidence(threshold: float = 0.5) -> str:
+    """Build a prompt to audit the predictions with low confidence."""
+    return (
+        "Lis pets://stats et pets://metrics. Puis utilise count_by avec "
+        f"min_confidence={threshold} et compare avec count_by sans seuil pour "
+        "voir quelles races perdent le plus d'images. Résume les races les "
+        "plus incertaines et recommande un seuil de confiance adapté."
+    )
+ 
+ 
+@mcp.prompt()
+def breed_report(label: str) -> str:
+    """Build a prompt to produce a full report about one breed."""
+    return (
+        f"Fais un rapport sur la race {label} : lis pets://breed/{label}, "
+        f"appelle filter_images(label='{label}', min_confidence=0.9, limit=5) "
+        f"pour les exemples les plus sûrs, count_by(label='{label}') et "
+        f"top_confusions(label='{label}'). Présente le résultat en sections : "
+        "volume, qualité, confusions, exemples."
+    )
 
 if __name__ == "__main__":
     init()
