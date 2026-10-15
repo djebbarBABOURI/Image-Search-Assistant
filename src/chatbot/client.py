@@ -1,24 +1,60 @@
-import asyncio
+from contextlib import AsyncExitStack, asynccontextmanager
 
+import uvicorn
+from fastapi import FastAPI
+from fastapi.responses import FileResponse, JSONResponse
 from mcp import ClientSession
-
 from mcp.client.streamable_http import streamable_http_client as http_client
+from pathlib import Path
+from fastapi.staticfiles import StaticFiles
 
-MCP_URL = "http://localhost:8000/mcp"
+STATIC_DIR = Path(__file__).parent / "static"
+from agent import OllamaError, run_agent
+from config import MCP_URL
+from mcp_tools import to_ollama_tools
 
-
-async def main():
-    async with http_client(MCP_URL) as streams:
-        async with ClientSession(streams[0], streams[1]) as session:
-            await session.initialize()
-
-            # Lister les outils
-            tools = (await session.list_tools()).tools
-            print([t.name for t in tools])
-
-            # Appeler un outil (exemple avec list_breeds, sans paramètre)
-            result = await session.call_tool("list_breeds", {})
-            print("\n".join(c.text for c in result.content if getattr(c, "text", None)))
+state: dict = {}
 
 
-asyncio.run(main())
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    async with AsyncExitStack() as stack:
+        streams = await stack.enter_async_context(http_client(MCP_URL))
+        session = await stack.enter_async_context(ClientSession(streams[0], streams[1]))
+        await session.initialize()
+        tools = (await session.list_tools()).tools
+        state["session"] = session
+        state["tools"] = tools
+        state["ollama_tools"] = to_ollama_tools(tools)
+        print(f"MCP connecté : {[t.name for t in tools]}")
+        yield
+
+
+app = FastAPI(lifespan=lifespan)
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+@app.get("/")
+async def index():
+    return FileResponse(STATIC_DIR / "index.html")
+
+@app.get("/api/tools")
+async def tools():
+    return [{"name": t.name, "description": t.description} for t in state["tools"]]
+
+
+@app.post("/api/chat")
+async def chat(body: dict):
+    """body = {"messages": [{"role": "user"|"assistant", "content": "..."}]}"""
+    try:
+        reply, trace = await run_agent(
+            state["session"],
+            state["ollama_tools"],
+            body["messages"],
+            body.get("model"),
+        )
+    except OllamaError as e:
+        return JSONResponse({"detail": e.detail}, status_code=502)
+    return {"reply": reply, "tools": trace}
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="127.0.0.1", port=8080)

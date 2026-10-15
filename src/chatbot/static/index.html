@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Oxford Pets - Chat</title>
+    <style>
+        :root {
+            color-scheme: light dark;
+        }
+
+        body {
+            font-family: system-ui, sans-serif;
+            max-width: 720px;
+            margin: 1.5rem auto;
+            padding: 0 1rem;
+        }
+
+        #log {
+            border: 1px solid #8884;
+            border-radius: 8px;
+            padding: .75rem;
+            min-height: 300px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        .msg {
+            margin: .5rem 0;
+            padding: .5rem .75rem;
+            border-radius: 8px;
+            white-space: pre-wrap;
+        }
+
+        .user {
+            background: #4a90e233;
+            margin-left: 15%;
+        }
+
+        .assistant {
+            background: #8882;
+            margin-right: 15%;
+        }
+
+        .tools {
+            font-size: .8rem;
+            opacity: .7;
+            font-family: monospace;
+        }
+
+        form {
+            display: flex;
+            gap: .5rem;
+            margin-top: .75rem;
+        }
+
+        input {
+            flex: 1;
+            padding: .6rem;
+            font-size: 1rem;
+        }
+
+        button {
+            padding: .6rem 1rem;
+            font-size: 1rem;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Oxford Pets</h1>
+    <div id="log"></div>
+    <form id="form">
+        <input id="input" placeholder="Posez votre question…" autocomplete="off" autofocus>
+        <button id="send">Envoyer</button>
+    </form>
+
+    <script>
+        const log = document.getElementById("log");
+        const form = document.getElementById("form");
+        const input = document.getElementById("input");
+        const send = document.getElementById("send");
+        const messages = [];
+
+        function add(role, text, tools) {
+            const div = document.createElement("div");
+            div.className = "msg " + role;
+            div.textContent = text;
+            if (tools && tools.length) {
+                const t = document.createElement("div");
+                t.className = "tools";
+                t.textContent = "Outils : " + tools.map(x => x.name + "(" + JSON.stringify(x.args) + ")").join(", ");
+                div.appendChild(t);
+            }
+            log.appendChild(div);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        form.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const text = input.value.trim();
+            if (!text) return;
+            input.value = "";
+            add("user", text);
+            messages.push({ role: "user", content: text });
+            send.disabled = true;
+            try {
+                const r = await fetch("/api/chat", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ messages })
+                });
+                const data = await r.json();
+                if (!r.ok) throw new Error(data.detail || r.status);
+                messages.push({ role: "assistant", content: data.reply });
+                add("assistant", data.reply, data.tools);
+            } catch (err) {
+                add("assistant", "Erreur : " + err.message);
+                messages.pop();
+            } finally {
+                send.disabled = false;
+                input.focus();
+            }
+        });
+    </script>
+</body>
+
+</html>
