@@ -2,10 +2,13 @@ from contextlib import AsyncExitStack, asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from mcp import ClientSession
 from mcp.client.streamable_http import streamable_http_client as http_client
+from pathlib import Path
+from fastapi.staticfiles import StaticFiles
 
+STATIC_DIR = Path(__file__).parent / "static"
 from agent import OllamaError, run_agent
 from config import MCP_URL
 from mcp_tools import to_ollama_tools
@@ -28,7 +31,11 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
+@app.get("/")
+async def index():
+    return FileResponse(STATIC_DIR / "index.html")
 
 @app.get("/api/tools")
 async def tools():
@@ -48,7 +55,6 @@ async def chat(body: dict):
     except OllamaError as e:
         return JSONResponse({"detail": e.detail}, status_code=502)
     return {"reply": reply, "tools": trace}
-
 
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8080)
