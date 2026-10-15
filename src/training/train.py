@@ -14,6 +14,8 @@ Options d'amélioration (désactivées par défaut, pour garder les anciens rég
     --augment trivial        TrivialAugmentWide au lieu de ColorJitter + rotation
     --label-smoothing 0.1    le modèle vise 90 % de certitude au lieu de 100 %
     --mixup                  MixUp ou CutMix (au hasard) sur chaque batch d'entraînement
+    --optimizer sgd          SGD + momentum 0.9 au lieu d'AdamW
+    --warmup 5               5 époques de warm-up avant le cosine
 
 Résultats sauvegardés dans <out-dir>/<mode>_seed<seed>/ :
     model.pt      -> meilleur modèle (selon la validation)
@@ -53,6 +55,10 @@ def get_args():
                    help="standard = ColorJitter + rotation ; trivial = TrivialAugmentWide")
     p.add_argument("--label-smoothing", type=float, default=0.0)
     p.add_argument("--mixup", action="store_true", help="active MixUp / CutMix")
+    p.add_argument("--optimizer", choices=["adamw", "sgd"], default="adamw",
+                   help="sgd = SGD + momentum 0.9")
+    p.add_argument("--warmup", type=int, default=0,
+                   help="nb d'époques de warm-up (lr qui monte progressivement) avant le cosine")
     p.add_argument("--data-dir", default="data")
     p.add_argument("--out-dir", default="runs")
     return p.parse_args()
@@ -167,9 +173,22 @@ def main():
     mix = (v2.RandomChoice([v2.MixUp(num_classes=NUM_CLASSES),
                             v2.CutMix(num_classes=NUM_CLASSES)])
            if args.mixup else None)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=args.weight_decay)
-    # Cosine : le lr part de `lr` et descend progressivement jusqu'à ~0 à la dernière époque
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
+    if args.optimizer == "sgd":
+        optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9,
+                                    weight_decay=args.weight_decay)
+    else:
+        optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=args.weight_decay)
+    # Cosine : le lr part de `lr` et descend progressivement jusqu'à ~0 à la dernière époque.
+    # Avec --warmup N : le lr monte d'abord de lr/10 à lr pendant N époques, puis cosine.
+    cosine = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer,
+                                                        T_max=args.epochs - args.warmup)
+    if args.warmup > 0:
+        warm = torch.optim.lr_scheduler.LinearLR(optimizer, start_factor=0.1,
+                                                 total_iters=args.warmup)
+        scheduler = torch.optim.lr_scheduler.SequentialLR(optimizer, [warm, cosine],
+                                                          milestones=[args.warmup])
+    else:
+        scheduler = cosine
 
     history, best_val, best_epoch = [], -1.0, 0
     stopped_epoch = args.epochs
@@ -203,7 +222,7 @@ def main():
                    weight_decay=args.weight_decay, scheduler="cosine",
                    patience=args.patience, batch_size=args.batch_size,
                    augment=args.augment, label_smoothing=args.label_smoothing,
-                   mixup=args.mixup,
+                   mixup=args.mixup, optimizer=args.optimizer, warmup=args.warmup,
                    best_val_acc=best_val, best_epoch=best_epoch, stopped_epoch=stopped_epoch,
                    test_top1=te_top1, test_top5=te_top5,
                    history=history, classes=classes)
