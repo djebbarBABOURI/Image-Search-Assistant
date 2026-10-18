@@ -1,0 +1,9 @@
+mcp[cli]
+mcp
+Pillow
+torch
+torchvision
+numpy
+fastapi
+uvicorn
+httpx

@@ -1,93 +1,143 @@
-# Image Search Assistant
+# image-search-assistant
 
+Serveur [MCP](https://modelcontextprotocol.io/) de classification d'images basé sur un **ResNet18** entraîné sur le jeu de données **Oxford-IIIT Pets** (races de chats et de chiens).
 
+## Sommaire
 
-## Getting started
+- [Prérequis](#prérequis)
+- [Installation](#installation)
+- [Télécharger les images](#télécharger-les-images)
+- [Construire le cache](#construire-le-cache)
+- [Lancement](#lancement)
+- [Outils, ressources et prompts MCP](#outils-ressources-et-prompts-mcp)
+- [Structure du projet](#structure-du-projet)
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+## Prérequis
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-* [Create](https://docs.gitlab.com/user/project/repository/web_editor/#create-a-file) or [upload](https://docs.gitlab.com/user/project/repository/web_editor/#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
-
-```
-cd existing_repo
-git remote add origin https://gitlab.univ-artois.fr/yacine_atmani/image-search-assistant.git
-git branch -M main
-git push -uf origin main
-```
-
-## Integrate with your tools
-
-* [Set up project integrations](https://gitlab.univ-artois.fr/yacine_atmani/image-search-assistant/-/settings/integrations)
-
-## Collaborate with your team
-
-* [Invite team members and collaborators](https://docs.gitlab.com/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/user/project/merge_requests/creating_merge_requests/)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/user/project/issues/managing_issues/#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
-
-## Test and Deploy
-
-Use the built-in continuous integration in GitLab.
-
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/topics/autodevops/requirements/)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ci/environments/protected_environments/)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+- Python 3.10 ou plus récent
+- [uv](https://docs.astral.sh/uv/)
+- Le modèle entraîné : `models/model.pt`
+- Les images : `data/images/` (`.jpg`, `.jpeg`, `.png`)
 
 ## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+Aucune installation manuelle : `uv` crée un environnement temporaire à partir de `requirements.txt` au premier lancement.
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+> Le premier lancement télécharge `torch` et `torchvision` (plusieurs centaines de Mo). Les suivants utilisent le cache.
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+## Télécharger les images
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+Les images viennent du jeu de données [Oxford-IIIT Pet](https://www.robots.ox.ac.uk/~vgg/data/pets/) (environ 750 Mo). Depuis la racine du projet (PowerShell) :
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+```powershell
+New-Item -ItemType Directory -Force data | Out-Null
+Invoke-WebRequest -Uri "https://www.robots.ox.ac.uk/~vgg/data/pets/data/images.tar.gz" -OutFile data\images.tar.gz
+tar -xzf data\images.tar.gz -C data
+Remove-Item data\images.tar.gz
+```
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+Les images se retrouvent dans `data/images/`.
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+## Construire le cache
 
-## License
-For open source projects, say how it is licensed.
+Le serveur lit les prédictions dans `models/pets_cache.npz`. Ce fichier se génère une seule fois, depuis la racine du projet :
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+```powershell
+uv run --with-requirements requirements.txt python tools/build_cache.py
+```
+
+Le calcul prend quelques minutes sur CPU. Relancez cette commande si vous changez de modèle ou si le contenu de `data/images/` change (supprimez d'abord `models/pets_cache.npz`).
+
+## Lancement
+
+### Mode 1 : MCP Inspector (tester les outils)
+
+```powershell
+.\run.ps1
+```
+
+Ouvrez le lien `http://localhost:6274/?MCP_PROXY_AUTH_TOKEN=...` affiché dans le terminal (le token change à chaque démarrage). `Ctrl+C` arrête le serveur.
+
+### Mode 2 : serveur HTTP
+
+Le serveur écoute sur `http://localhost:8000/mcp`.
+
+```powershell
+.\run_server.ps1
+```
+
+avec `run_server.ps1` :
+
+```powershell
+Set-Location $PSScriptRoot
+uv run --with-requirements requirements.txt python src/mcp_server/server.py
+```
+
+Le cache doit exister avant le premier lancement (voir [Construire le cache](#construire-le-cache)).
+
+### Mode 3 : chatbot (client web)
+
+Le client relie le serveur MCP à un LLM local via Ollama et sert une interface web. Ce mode nécessite le **Mode 2** : le serveur HTTP doit déjà tourner.
+
+Il faut 3 processus, chacun dans son terminal :
+
+1. **Ollama** : `ollama serve`
+2. **Serveur MCP** : `.\run_server.ps1`
+3. **Client** : `.\run_client.ps1`
+
+avec `run_client.ps1` :
+
+```powershell
+Set-Location $PSScriptRoot
+uv run --with-requirements requirements.txt --with fastapi --with uvicorn --with httpx python src/chatbot/client.py
+```
+
+Ouvrez ensuite http://localhost:8080.
+
+## Outils, ressources et prompts MCP
+
+### Outils
+
+| Outil | Description |
+|---|---|
+| `classify(image_id, top_k)` | Prédit la race d'une image et renvoie les meilleures probabilités |
+| `find_similar(image_id, k)` | Trouve les k images les plus proches dans l'espace des embeddings |
+| `filter_images(label, min_confidence, limit)` | Liste les images prédites comme une race donnée |
+| `count_by(label, min_confidence)` | Compte les images par race prédite |
+| `top_confusions(label, k)` | Races les plus souvent confondues avec la race donnée |
+| `list_breeds()` | Liste les 37 races et leur espèce |
+
+### Ressources
+
+| URI | Contenu |
+|---|---|
+| `pets://classes` | Les 37 races |
+| `pets://stats` | Statistiques générales de la collection |
+| `pets://metrics` | Accuracy globale du modèle |
+| `pets://image/{image_id}` | Résumé d'une image |
+| `pets://breed/{label}` | Résumé d'une race |
+
+### Prompts
+
+`find_look_alikes`, `identify_image`, `analyze_confusions`, `audit_low_confidence`, `breed_report`.
+
+ Les identifiants d'images sont les noms de fichier sans extension (ex. `Abyssinian_1`). La race « réelle » est déduite du nom de fichier.
+
+## Structure du projet
+
+```
+image-search-assistant/
+├── data/images/           images (non versionnées)
+├── models/                model.pt, pets_cache.npz (non versionnés)
+├── src/
+│   ├── search_index.py    chargement du modèle, images, prédiction
+│   ├── mcp_server/        serveur MCP
+│   ├── chatbot/           client
+│   ├── evaluation/        métriques
+│   └── training/          entraînement et export
+├── tests/                 tests pytest
+├── tools/                 scripts utilitaires
+├── requirements.txt
+└── run.ps1
+├── run_client.ps1
+└── run_server.ps1

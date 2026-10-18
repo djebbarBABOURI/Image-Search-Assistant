@@ -1,6 +1,21 @@
+# Environnement et caches Python
 .venv/
-data/
-runs/**/model.pt
 __pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+
+# Fichiers lourds ou générés
 **/model.pt
+models/*.pt
+models/pets_cache.npz
+data/images/
+data/*.tar.gz
+data/oxford-iiit-pet/
+data/*.npz
+
+# Local
+.env
+.vscode/
+.idea/
 .DS_Store

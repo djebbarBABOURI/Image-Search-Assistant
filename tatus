@@ -1,0 +1,38 @@
+[1mdiff --git a/src/chatbot/client.py b/src/chatbot/client.py[m
+[1mindex b2030d6..775e11d 100644[m
+[1m--- a/src/chatbot/client.py[m
+[1m+++ b/src/chatbot/client.py[m
+[36m@@ -2,10 +2,13 @@[m [mfrom contextlib import AsyncExitStack, asynccontextmanager[m
+ [m
+ import uvicorn[m
+ from fastapi import FastAPI[m
+[31m-from fastapi.responses import JSONResponse[m
+[32m+[m[32mfrom fastapi.responses import FileResponse, JSONResponse[m
+ from mcp import ClientSession[m
+ from mcp.client.streamable_http import streamable_http_client as http_client[m
+[32m+[m[32mfrom pathlib import Path[m
+[32m+[m[32mfrom fastapi.staticfiles import StaticFiles[m
+ [m
+[32m+[m[32mSTATIC_DIR = Path(__file__).parent / "static"[m
+ from agent import OllamaError, run_agent[m
+ from config import MCP_URL[m
+ from mcp_tools import to_ollama_tools[m
+[36m@@ -28,7 +31,11 @@[m [masync def lifespan(app: FastAPI):[m
+ [m
+ [m
+ app = FastAPI(lifespan=lifespan)[m
+[32m+[m[32mapp.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")[m
+ [m
+[32m+[m[32m@app.get("/")[m
+[32m+[m[32masync def index():[m
+[32m+[m[32m    return FileResponse(STATIC_DIR / "index.html")[m
+ [m
+ @app.get("/api/tools")[m
+ async def tools():[m
+[36m@@ -49,6 +56,5 @@[m [masync def chat(body: dict):[m
+         return JSONResponse({"detail": e.detail}, status_code=502)[m
+     return {"reply": reply, "tools": trace}[m
+ [m
+[31m-[m
+ if __name__ == "__main__":[m
+     uvicorn.run(app, host="127.0.0.1", port=8080)[m
