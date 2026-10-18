@@ -6,10 +6,13 @@ __pycache__/
 *.egg-info/
 
 # Fichiers lourds ou générés
+**/model.pt
 models/*.pt
-data/images/
 models/pets_cache.npz
+data/images/
 data/*.tar.gz
+data/oxford-iiit-pet/
+data/*.npz
 
 # Local
 .env
