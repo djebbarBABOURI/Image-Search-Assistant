@@ -2,7 +2,11 @@ import sys
 import logging
 import os
 from pathlib import Path
-
+import base64
+import io
+import uuid
+import re
+from PIL import Image
 from mcp.server.mcpserver import MCPServer
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -17,6 +21,8 @@ mcp = MCPServer(name="pets-server", version="1.0.0", description="Oxford Pets MC
 
 MODEL_PATH = Path(os.getenv("PETS_MODEL", ROOT / "models" / "model.pt"))
 IMAGES_DIR = Path(os.getenv("PETS_IMAGES_DIR", ROOT / "data" / "images"))
+UPLOADS_DIR = Path(os.getenv("PETS_UPLOADS_DIR", ROOT / "data" / "uploads"))
+EXTS = {".jpg", ".jpeg", ".png"}
 CLASSES_PATH = ROOT / "models" / "classes.json"
 
 CLASSES = load_classes(CLASSES_PATH)
@@ -52,13 +58,40 @@ def top(probs, k: int) -> list[dict]:
             for j in np.argsort(-probs)[:k]]
 
 def vec(image_id: str):
-    """Retourne (id, probs, embedding normalisé, index collection) ou None
-    si l'image n'est pas dans la collection."""
+    """Retourne les probabilités et l'embedding d'une image."""
     stem = Path(image_id).stem
+
+    # Image du dataset
     i = S["pos"].get(stem)
-    if i is None:
-        return None
-    return stem, S["probs"][i], S["embs"][i], i
+    if i is not None:
+        return stem, S["probs"][i], S["embs"][i], i
+
+    # Image téléversée
+    if stem not in S["up"]:
+        path = next(
+            (UPLOADS_DIR / f"{stem}{ext}"
+             for ext in EXTS
+             if (UPLOADS_DIR / f"{stem}{ext}").is_file()),
+            None
+        )
+
+        if path is None:
+            return None
+
+        embs, probs = embs_and_probs_batch(S["model"], [path])
+        emb = embs[0]
+        norm = np.linalg.norm(emb)
+
+        if norm == 0:
+            return None
+
+        S["up"][stem] = (
+            probs[0],
+            emb / norm
+        )
+
+    probs, emb = S["up"][stem]
+    return stem, probs, emb, None
 
 def init() -> None:
     if not CACHE_PATH.exists():
@@ -74,22 +107,106 @@ def init() -> None:
         pos={s: i for i, s in enumerate(ids)},
         embs=emb / np.linalg.norm(emb, axis=1, keepdims=True),
     )
+    S["up"] = {}
     log.info("Modèle chargé (%d classes), %d images dans %s", len(CLASSES), len(ids), IMAGES_DIR)
 
 def ensure_init() -> None:
     if not S:
         init()
 
+
+@mcp.tool()
+def register_image(filename: str, data_base64: str) -> dict:
+    """Enregistre une image envoyée par le client et retourne son identifiant."""
+    try:
+        raw = base64.b64decode(data_base64, validate=True)
+        with Image.open(io.BytesIO(raw)) as source:
+            img = source.convert("RGB")
+    except Exception:
+        return {"error": "Image invalide"}
+
+    UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+
+    image_id = f"upload_{uuid.uuid4().hex[:8]}"
+    img.save(UPLOADS_DIR / f"{image_id}.jpg", format="JPEG", quality=95)
+
+    return {
+        "image_id": image_id,
+        "filename": Path(filename).name
+    }
+
+@mcp.tool()
+def get_image(image_id: str, size: str = "thumb") -> dict:
+    """Retourne une image en Base64 pour le client web."""
+    ensure_init()
+
+    if size not in ("thumb", "full"):
+        return {"error": "Taille invalide"}
+
+    if not image_id or not re.fullmatch(r"[\w. -]+", image_id):
+        return {"error": "Identifiant invalide"}
+
+    stem = Path(image_id).stem
+
+    # Recherche dans le dataset
+    image_path = S["files"].get(stem)
+
+    # Recherche dans les images téléversées
+    if image_path is None:
+        image_path = next(
+            (UPLOADS_DIR / f"{stem}{ext}"
+             for ext in EXTS
+             if (UPLOADS_DIR / f"{stem}{ext}").is_file()),
+            None
+        )
+
+    if image_path is None or not Path(image_path).is_file():
+        return {"error": f"Image introuvable : {image_id}"}
+
+    try:
+        with Image.open(image_path) as source:
+            img = source.copy()
+            original_format = source.format or "JPEG"
+
+        if size == "thumb":
+            img.thumbnail((320, 320))
+            img = img.convert("RGB")
+            buffer = io.BytesIO()
+            img.save(buffer, format="JPEG", quality=85)
+            content = buffer.getvalue()
+            mime = "image/jpeg"
+        else:
+            content = Path(image_path).read_bytes()
+            mime = Image.MIME.get(
+                original_format,
+                "application/octet-stream"
+            )
+
+        return {
+            "image_id": stem,
+            "mime": mime,
+            "data_base64": base64.b64encode(content).decode("ascii")
+        }
+
+    except Exception:
+        log.exception("Erreur lors de la lecture de %s", image_id)
+        return {"error": "Impossible de lire l'image"}
+
 @mcp.tool()
 def classify(image_id: str, top_k: int = 3) -> dict:
-    """Predict the breed of an image and give the top probabilities."""
-    log.info("classify appelé avec %s", image_id)
+    """Prédit la race d'une image du dataset ou téléversée."""
     ensure_init()
-    path = S["files"].get(Path(image_id).stem)
-    if path is None:
-        return {"error": f"Image inconnue : {image_id}"}
-    return {"image_id": path.stem, "predictions": predict(S["model"], path, CLASSES, top_k)}
 
+    result = vec(image_id)
+    if result is None:
+        return {"error": f"Image inconnue : {image_id}"}
+
+    iid, probs, _, _ = result
+
+    return {
+        "image_id": iid,
+        "predictions": top(probs, top_k)
+    }
 
 @mcp.tool()
 def find_similar(image_id: str, k: int = 5) -> dict:

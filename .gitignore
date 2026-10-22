@@ -19,3 +19,8 @@ data/*.npz
 .vscode/
 .idea/
 .DS_Store
+
+# Images téléversées et fichiers générés
+uploads/
+static/uploads/
+data/uploads/

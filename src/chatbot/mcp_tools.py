@@ -1,20 +1,23 @@
 from mcp import ClientSession
 
 
-def to_ollama_tools(mcp_tools) -> list[dict]:
-    """Convertit les outils MCP en définitions de fonctions pour Ollama."""
+HIDDEN = {"register_image", "get_image"}
+
+
+def to_ollama_tools(tools):
     return [
         {
             "type": "function",
             "function": {
                 "name": t.name,
                 "description": t.description or "",
-                "parameters": getattr(t, "inputSchema", None)
-                or getattr(t, "input_schema", None)
+                "parameters": getattr(t, "input_schema", None)
+                or getattr(t, "inputSchema", None)
                 or {"type": "object", "properties": {}},
             },
         }
-        for t in mcp_tools
+        for t in tools
+        if t.name not in HIDDEN
     ]
 
 

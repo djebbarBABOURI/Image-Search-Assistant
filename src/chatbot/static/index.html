@@ -41,6 +41,11 @@
                 </section>
 
                 <section class="sb-section">
+                    <h2 class="sb-label">Image courante</h2>
+                    <div id="current" class="current"></div>
+                </section>
+
+                <section class="sb-section">
                     <h2 class="sb-label">Outils MCP</h2>
                     <div id="tools" class="tools-list" aria-live="polite">
                         <span class="text-body-secondary small">Chargement…</span>
@@ -49,8 +54,8 @@
             </div>
 
             <div class="sb-foot">
-                Le modèle de langage répond aux questions et utilise les résultats des outils MCP pour interroger la
-                collection Oxford Pets.
+                Le modèle de langage ne voit pas l’image : il reçoit un identifiant et les résultats des outils. La race
+                vient du ResNet.
             </div>
         </aside>
 
@@ -78,9 +83,9 @@
             <div id="chat" class="chat" role="log" aria-live="polite" aria-label="Conversation">
                 <div class="chat-inner">
                     <section id="welcome" class="welcome">
-                        <h2>Comment puis-je vous aider ?</h2>
-                        <p>Interrogez la collection Oxford Pets sur les races, les prédictions et les performances du
-                            modèle.</p>
+                        <h2>Quelle race cherchez-vous ?</h2>
+                        <p>Joignez une photo pour connaître sa race et trouver des images proches, ou interrogez la
+                            collection.</p>
                         <div class="chips">
                             <button type="button" class="chip">Combien d’images par race prédite ?</button>
                             <button type="button" class="chip">Liste 5 images prédites Siamese avec plus de 90 % de
@@ -97,7 +102,13 @@
 
             <form id="composer" class="composer" autocomplete="off">
                 <div class="composer-inner">
+                    <div id="pending" class="pending" hidden></div>
                     <div class="composer-box">
+                        <input type="file" id="file" accept="image/*" hidden>
+                        <button type="button" id="attach" class="btn btn-outline-secondary border-0"
+                            aria-label="Joindre une image" title="Joindre une image">
+                            <i class="bi bi-image"></i>
+                        </button>
                         <textarea id="input" class="form-control" rows="1" placeholder="Écrivez un message…"
                             aria-label="Message"></textarea>
                         <button id="send" type="submit" class="btn btn-primary">
@@ -108,6 +119,24 @@
                 </div>
             </form>
         </main>
+    </div>
+
+    <div id="drop" class="drop" hidden>
+        <div class="drop-card"><i class="bi bi-cloud-arrow-up"></i><span>Déposez l’image pour l’analyser</span></div>
+    </div>
+
+    <div class="modal fade" id="lightbox" tabindex="-1" aria-label="Aperçu de l’image" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content lightbox">
+                <div class="modal-header border-0 pb-0">
+                    <p id="lightbox-cap" class="modal-title small mb-0"></p>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <img id="lightbox-img" alt="">
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="toast-container position-fixed top-0 end-0 p-3" id="toasts"></div>

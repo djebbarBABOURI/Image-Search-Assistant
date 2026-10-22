@@ -1,6 +1,5 @@
-
-/* Assistant Oxford Pets : client web sans gestion des images.
-   API utilisée : GET /api/models, GET /api/tools, POST /api/chat. */
+/* Assistant Oxford Pets : client web avec gestion des images.
+   API utilisée : GET /api/models, GET /api/tools, POST /api/upload, POST /api/chat. */
 (() => {
     'use strict';
 
@@ -74,13 +73,23 @@
         tools: $('#tools'),
         toasts: $('#toasts'),
         theme: $('#theme'),
-        reset: $('#reset')
+        reset: $('#reset'),
+        current: $('#current'),
+        pending: $('#pending'),
+        file: $('#file'),
+        attach: $('#attach'),
+        drop: $('#drop'),
+        lightboxEl: $('#lightbox'),
+        lightboxImg: $('#lightbox-img'),
+        lightboxCap: $('#lightbox-cap')
     };
 
     const state = {
         history: [],
         busy: false,
-        toolSeq: 0
+        toolSeq: 0,
+        image: null,
+        lastImage: null
     };
 
     /* Notifications */
@@ -212,6 +221,48 @@
         }
     }
 
+    /* Lightbox et vignettes */
+    const lightbox = new bootstrap.Modal(els.lightboxEl);
+
+    function openLightbox(src, caption) {
+        els.lightboxImg.src = src;
+        els.lightboxCap.textContent = caption || '';
+        lightbox.show();
+    }
+
+    const imgUrl = (item, size = 'thumb') => {
+        if (item.url) return item.url;
+        const id = item.image_id || item.id;
+        return id ? `/api/image/${encodeURIComponent(id)}?size=${size}` : null;
+    };
+
+    function shot(item, { badge = null, title = '', sub = '', ref = false } = {}) {
+        const src = imgUrl(item);
+        const full = imgUrl(item, 'full');
+        const content = src
+            ? h('img', {
+                src, alt: title, loading: 'lazy',
+                onerror: (e) => e.target.replaceWith(
+                    h('span', { class: 'shot-missing' }, icon('image'), 'Indisponible'))
+            })
+            : h('span', { class: 'shot-missing' }, icon('image'), 'Indisponible');
+
+        return h('figure', { class: `shot${ref ? ' shot-ref' : ''}` },
+            h('button', {
+                type: 'button', class: 'shot-btn',
+                'aria-label': `Agrandir ${title}`,
+                onclick: () => full && openLightbox(full, `${title} ${sub}`.trim())
+            },
+                content,
+                badge != null ? h('span', { class: 'shot-badge' }, String(badge)) : null),
+            h('figcaption', {},
+                h('span', { class: 'shot-title' }, title),
+                sub ? h('span', { class: 'shot-sub' }, sub) : null));
+    }
+
+    const gallery = (items, mapper) =>
+        h('div', { class: 'gallery' }, items.map(mapper));
+
     /* Rendu des résultats d'outils */
     const TOOL_LABELS = {
         classify: ['Classification', 'bullseye'],
@@ -279,11 +330,7 @@
                     'div',
                     { class: 'stat' },
                     h('strong', {}, num(data.count)),
-                    h(
-                        'span',
-                        {},
-                        `images prédites ${pretty(data.label)}${suffix}`
-                    )
+                    h('span', {}, `images prédites ${pretty(data.label)}${suffix}`)
                 );
             }
 
@@ -313,8 +360,82 @@
             );
         },
 
+        list_breeds(data) {
+            return h(
+                'div',
+                { class: 'breeds' },
+                (data.breeds || []).map((breed) =>
+                    h(
+                        'span',
+                        { class: 'breed' },
+                        pretty(breed.name),
+                        speciesTag(breed.species)
+                    )
+                )
+            );
+        },
+
+        classify(data) {
+            const top = data.top || data.predictions || [];
+            const ref = state.image
+                ? shot(state.image, { title: 'Votre image', ref: true })
+                : null;
+
+            return h(
+                'div',
+                { class: 'classify' },
+                ref,
+                h(
+                    'div',
+                    { class: 'rows' },
+                    top.map((p) => {
+                        const conf = p.confidence ?? p.probability ?? 0;
+
+                        return barRow(
+                            pretty(p.breed || p.label),
+                            pct(conf),
+                            conf,
+                            1,
+                            p.species ? speciesTag(p.species) : null
+                        );
+                    })
+                )
+            );
+        },
+
+        find_similar(data) {
+            const items = data.results || data.images || [];
+
+            return gallery(items, (it, i) =>
+                shot(it, {
+                    badge: i + 1,
+                    title: pretty(it.predicted_breed || it.breed),
+                    sub: it.similarity != null ? pct(it.similarity) : ''
+                })
+            );
+        },
+
+        filter_images(data) {
+            const items = data.images || data.results || [];
+
+            return h(
+                'div',
+                {},
+                gallery(items, (it) =>
+                    shot(it, {
+                        title: pretty(it.predicted_breed || it.breed),
+                        sub: it.confidence != null ? pct(it.confidence) : ''
+                    })
+                ),
+                data.total != null
+                    ? h('p', { class: 'note' }, `${num(data.total)} images correspondantes.`)
+                    : null
+            );
+        },
+
         top_confusions(data) {
             const confusions = data.confused_with || [];
+            const max = Math.max(...confusions.map((c) => c.count), 1);
 
             return h(
                 'div',
@@ -332,43 +453,29 @@
                 confusions.length
                     ? h(
                         'div',
-                        { class: 'rows mt-3' },
-                        confusions.map((item) =>
-                            barRow(
-                                `Race prédite : ${pretty(item.predicted_breed)}`,
-                                `${num(item.count)} images`,
-                                item.count,
-                                Math.max(...confusions.map((entry) => entry.count), 1)
+                        { class: 'confusions mt-3' },
+                        confusions.map((c) =>
+                            h(
+                                'div',
+                                { class: 'confusion' },
+                                barRow(
+                                    `Race prédite : ${pretty(c.predicted_breed)}`,
+                                    `${num(c.count)} images`,
+                                    c.count,
+                                    max
+                                ),
+                                (c.examples || []).length
+                                    ? gallery(c.examples, (it) =>
+                                        shot(it, {
+                                            title: pretty(it.predicted_breed || c.predicted_breed),
+                                            sub: it.confidence != null ? pct(it.confidence) : ''
+                                        })
+                                    )
+                                    : null
                             )
                         )
                     )
-                    : h(
-                        'p',
-                        { class: 'note' },
-                        'Aucune confusion signalée pour cette race.'
-                    ),
-                confusions.length
-                    ? h(
-                        'p',
-                        { class: 'note' },
-                        'Les résultats détaillés des exemples ne sont pas affichés dans cette version sans images.'
-                    )
-                    : null
-            );
-        },
-
-        list_breeds(data) {
-            return h(
-                'div',
-                { class: 'breeds' },
-                (data.breeds || []).map((breed) =>
-                    h(
-                        'span',
-                        { class: 'breed' },
-                        pretty(breed.name),
-                        speciesTag(breed.species)
-                    )
-                )
+                    : h('p', { class: 'note' }, 'Aucune confusion signalée pour cette race.')
             );
         }
     };
@@ -468,6 +575,68 @@
         );
     }
 
+    /* Image jointe et image courante */
+    async function uploadImage(file) {
+        if (!file || !file.type.startsWith('image/')) {
+            toast('Le fichier doit être une image.');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/upload', { method: 'POST', body: file });
+
+            if (!response.ok) {
+                throw new Error(await detail(response, `Erreur ${response.status}`));
+            }
+
+            const data = await response.json();
+
+            state.image = {
+                id: data.image_id,
+                url: data.url || URL.createObjectURL(file),
+                name: file.name
+            };
+
+            renderPending();
+            renderCurrent(state.image);
+        } catch (error) {
+            toast(error.message || 'Échec du téléversement.');
+        }
+    }
+
+    function renderPending() {
+        const img = state.image;
+        els.pending.hidden = !img;
+
+        if (!img) {
+            els.pending.replaceChildren();
+            return;
+        }
+
+        els.pending.replaceChildren(
+            h('img', { src: img.url, alt: '' }),
+            h('span', {}, img.name, ' · ', h('code', {}, img.id)),
+            h('button', {
+                type: 'button',
+                class: 'btn-close',
+                'aria-label': 'Retirer l’image',
+                onclick: () => {
+                    state.image = null;
+                    renderPending();
+                }
+            })
+        );
+    }
+
+    function renderCurrent(img) {
+        els.current.classList.toggle('has-image', !!img);
+        els.current.replaceChildren(
+            ...(img
+                ? [h('img', { src: img.url, alt: img.name }), h('code', {}, img.id)]
+                : ['Aucune image envoyée.'])
+        );
+    }
+
     /* Affichage des messages */
     function scrollToEnd() {
         els.chat.scrollTo({
@@ -504,14 +673,16 @@
         return box;
     }
 
-    function addUser(text) {
-        const node = h(
-            'div',
-            { class: 'msg-user' },
-            h('div', { class: 'bubble' }, text)
+    function addUser(text, image = null) {
+        els.messages.append(
+            h(
+                'div',
+                { class: 'msg-user' },
+                image ? h('img', { src: image.url, alt: image.name }) : null,
+                text ? h('div', { class: 'bubble' }, text) : null
+            )
         );
 
-        els.messages.append(node);
         scrollToEnd();
     }
 
@@ -583,18 +754,26 @@
         if (state.busy) return;
 
         const text = els.input.value.trim();
-        if (!text) return;
+        const image = state.image;
+        if (!text && !image) return;
 
         els.welcome.hidden = true;
-        addUser(text);
+        addUser(text, image);
 
         state.history.push({
             role: 'user',
-            content: text
+            content: (text || 'Quelle est la race de cet animal ?') +
+                (image ? `\n[image_id: ${image.id}]` : '')
         });
+
+        if (image) state.lastImage = image;
 
         els.input.value = '';
         els.input.style.height = 'auto';
+
+        state.image = null;
+        renderPending();
+        renderCurrent(image);
 
         setBusy(true);
         const waiting = addBot({ typing: true });
@@ -638,6 +817,8 @@
             });
 
             state.history.pop();
+            state.image = image;
+            renderPending();
         } finally {
             setBusy(false);
             els.input.focus();
@@ -648,6 +829,10 @@
         if (state.busy) return;
 
         state.history = [];
+        state.image = null;
+        renderPending();
+        renderCurrent(null);
+
         els.messages.replaceChildren();
         els.welcome.hidden = false;
         els.chat.scrollTo({ top: 0 });
@@ -684,7 +869,54 @@
         });
     });
 
+    els.attach.addEventListener('click', () => els.file.click());
+
+    els.file.addEventListener('change', () => {
+        uploadImage(els.file.files[0]);
+        els.file.value = '';
+    });
+
+    let dragDepth = 0;
+    const hasFiles = (e) => [...(e.dataTransfer?.types || [])].includes('Files');
+
+    window.addEventListener('dragenter', (e) => {
+        if (!hasFiles(e)) return;
+        dragDepth++;
+        els.drop.hidden = false;
+    });
+
+    window.addEventListener('dragleave', () => {
+        if (--dragDepth <= 0) {
+            dragDepth = 0;
+            els.drop.hidden = true;
+        }
+    });
+
+    window.addEventListener('dragover', (e) => {
+        if (hasFiles(e)) e.preventDefault();
+    });
+
+    window.addEventListener('drop', (e) => {
+        if (!hasFiles(e)) return;
+        e.preventDefault();
+        dragDepth = 0;
+        els.drop.hidden = true;
+        uploadImage(e.dataTransfer.files[0]);
+    });
+
+    els.input.addEventListener('paste', (e) => {
+        const file = [...(e.clipboardData?.files || [])].find((f) =>
+            f.type.startsWith('image/')
+        );
+
+        if (file) {
+            e.preventDefault();
+            uploadImage(file);
+        }
+    });
+
     /* Démarrage */
+    renderCurrent(null);
     loadTools();
     loadModels();
     els.input.focus();
