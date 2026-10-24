@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import argparse
 import json
 import re
@@ -16,10 +17,22 @@ KEY_METRICS = [
     "analysis.confidence.t80.coverage", "analysis.confidence.t80.accuracy",
 ]
 
+def is_percentage_metric(key: str) -> bool:
+    if key.endswith(".ece") or key in {"n_test", "embedding_dim", "classification.n"}:
+        return False
+    if key.endswith(".n") or key.endswith(".support") or key.endswith("_errors"):
+        return False
+    return (
+        key.endswith((".top1", ".top5", ".macro_f1", ".macro_precision", ".macro_recall",
+                      ".mean_confidence", ".accuracy", ".coverage", ".species_accuracy",
+                      ".same_species_error_share"))
+        or ".p@" in key
+    )
+
 def flatten(d, prefix="") -> dict[str, float]:
     out = {}
     for k, v in d.items():
-        if k in ("per_class", "most_confused"):
+        if k in ("per_class", "most_confused", "confusion_matrix"):
             continue
         key = f"{prefix}.{k}" if prefix else k
         if isinstance(v, dict):
@@ -34,48 +47,60 @@ def group_name(path: Path) -> str:
 def aggregate(paths) -> dict[str, dict[str, tuple[float, float, int]]]:
     groups = defaultdict(list)
     for p in map(Path, paths):
-        groups[group_name(p)].append(flatten(json.loads(p.read_text())))
+        groups[group_name(p)].append(flatten(json.loads(p.read_text(encoding="utf-8"))))
     res = {}
-    for g, runs in groups.items():
-        res[g] = {}
+    for group, runs in groups.items():
+        res[group] = {}
         for key in sorted(set().union(*runs)):
-            vals = np.array([r[key] for r in runs if key in r])
-            std = float(vals.std(ddof=1)) if len(vals) > 1 else float("nan")
-            res[g][key] = (float(vals.mean()), std, len(vals))
+            vals = np.array([r[key] for r in runs if key in r], dtype=float)
+            std = float(vals.std(ddof=1)) if len(vals) > 1 else 0.0
+            res[group][key] = (float(vals.mean()), std, len(vals))
     return res
 
-def to_markdown(res, keys=None, as_percent=True) -> str:
+def format_metric(key: str, mean: float, std: float) -> str:
+    if is_percentage_metric(key):
+        return f"{mean * 100:.1f} ± {std * 100:.1f} %"
+    if key in {"n_test", "embedding_dim", "classification.n"} or key.endswith(".n") or key.endswith("_errors") or key.endswith(".support"):
+        return f"{mean:.1f} ± {std:.1f}"
+    return f"{mean:.3f} ± {std:.3f}"
+
+def to_markdown(res, keys=None) -> str:
     groups = list(res)
-    keys = keys or KEY_METRICS
+    if not groups:
+        return "| Métrique |\n|---|"
+    keys = list(keys) if keys is not None else KEY_METRICS
     keys = [k for k in keys if any(k in res[g] for g in groups)]
-    lines = ["| Métrique | " + " | ".join(f"{g} (n={max(res[g][k][2] for k in res[g])})" for g in groups) + " |",
-             "|---|" + "---|" * len(groups)]
-    for k in keys:
+    n_runs = {g: max((v[2] for v in res[g].values()), default=0) for g in groups}
+    lines = [
+        "| Métrique | " + " | ".join(f"{g} (n={n_runs[g]})" for g in groups) + " |",
+        "|---|" + "---|" * len(groups),
+    ]
+    for key in keys:
         cells = []
-        for g in groups:
-            if k not in res[g]:
+        for group in groups:
+            if key not in res[group]:
                 cells.append("–")
-                continue
-            m, s, _ = res[g][k]
-            f = 100 if as_percent and "ece" not in k else 1
-            fmt = "{:.1f} ± {:.1f}" if f == 100 else "{:.3f} ± {:.3f}"
-            cells.append(fmt.format(m * f, s * f) + (" %" if f == 100 else ""))
-        lines.append(f"| {k} | " + " | ".join(cells) + " |")
+            else:
+                mean, std, _ = res[group][key]
+                cells.append(format_metric(key, mean, std))
+        lines.append(f"| {key} | " + " | ".join(cells) + " |")
     return "\n".join(lines)
 
 def main():
-    p = argparse.ArgumentParser()
-    p.add_argument("eval_files", nargs="+")
-    p.add_argument("--out", default=None, help="fichier .md (et .json à côté)")
-    p.add_argument("--all", action="store_true", help="toutes les métriques, pas seulement les clés")
-    args = p.parse_args()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("eval_files", nargs="+")
+    parser.add_argument("--out", default=None, help="fichier .md (et .json à côté)")
+    parser.add_argument("--all", action="store_true", help="toutes les métriques, pas seulement les clés principales")
+    args = parser.parse_args()
     res = aggregate(args.eval_files)
-    keys = sorted({k for g in res.values() for k in g}) if args.all else None
+    keys = sorted({key for group in res.values() for key in group}) if args.all else None
     md = to_markdown(res, keys)
     print(md)
     if args.out:
-        Path(args.out).write_text(md + "\n")
-        Path(args.out).with_suffix(".json").write_text(json.dumps(res, indent=2))
+        out = Path(args.out)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(md + "\n", encoding="utf-8")
+        out.with_suffix(".json").write_text(json.dumps(res, indent=2, ensure_ascii=False), encoding="utf-8")
 
 if __name__ == "__main__":
     main()
