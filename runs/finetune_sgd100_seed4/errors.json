@@ -1,0 +1,254 @@
+[
+  {
+    "image_id": "oxford-iiit-pet/images/english_cocker_spaniel_195.jpg",
+    "true": "English Cocker Spaniel",
+    "pred": "Havanese",
+    "confidence": 0.8796860575675964,
+    "prob_true": 0.08480435609817505,
+    "top3": [
+      [
+        "Havanese",
+        0.8796860575675964
+      ],
+      [
+        "English Cocker Spaniel",
+        0.08480435609817505
+      ],
+      [
+        "Wheaten Terrier",
+        0.01633485034108162
+      ]
+    ]
+  },
+  {
+    "image_id": "oxford-iiit-pet/images/Persian_264.jpg",
+    "true": "Persian",
+    "pred": "Pomeranian",
+    "confidence": 0.5316683053970337,
+    "prob_true": 0.10021430999040604,
+    "top3": [
+      [
+        "Pomeranian",
+        0.5316683053970337
+      ],
+      [
+        "Ragdoll",
+        0.34367966651916504
+      ],
+      [
+        "Persian",
+        0.10021430999040604
+      ]
+    ]
+  },
+  {
+    "image_id": "oxford-iiit-pet/images/staffordshire_bull_terrier_33.jpg",
+    "true": "Staffordshire Bull Terrier",
+    "pred": "American Bulldog",
+    "confidence": 0.9775727987289429,
+    "prob_true": 0.01740361750125885,
+    "top3": [
+      [
+        "American Bulldog",
+        0.9775727987289429
+      ],
+      [
+        "Staffordshire Bull Terrier",
+        0.01740361750125885
+      ],
+      [
+        "American Pit Bull Terrier",
+        0.00434323912486434
+      ]
+    ]
+  },
+  {
+    "image_id": "oxford-iiit-pet/images/British_Shorthair_276.jpg",
+    "true": "British Shorthair",
+    "pred": "Bengal",
+    "confidence": 0.4779391884803772,
+    "prob_true": 0.04180070757865906,
+    "top3": [
+      [
+        "Bengal",
+        0.4779391884803772
+      ],
+      [
+        "Bombay",
+        0.22572825849056244
+      ],
+      [
+        "Egyptian Mau",
+        0.1011245921254158
+      ]
+    ]
+  },
+  {
+    "image_id": "oxford-iiit-pet/images/saint_bernard_196.jpg",
+    "true": "Saint Bernard",
+    "pred": "Beagle",
+    "confidence": 0.561835765838623,
+    "prob_true": 0.00037134415470063686,
+    "top3": [
+      [
+        "Beagle",
+        0.561835765838623
+      ],
+      [
+        "Japanese Chin",
+        0.24939289689064026
+      ],
+      [
+        "Chihuahua",
+        0.04887881875038147
+      ]
+    ]
+  },
+  {
+    "image_id": "oxford-iiit-pet/images/Birman_36.jpg",
+    "true": "Birman",
+    "pred": "Siamese",
+    "confidence": 0.8154138922691345,
+    "prob_true": 0.09157436341047287,
+    "top3": [
+      [
+        "Siamese",
+        0.8154138922691345
+      ],
+      [
+        "Birman",
+        0.09157436341047287
+      ],
+      [
+        "Ragdoll",
+        0.08656389266252518
+      ]
+    ]
+  },
+  {
+    "image_id": "oxford-iiit-pet/images/staffordshire_bull_terrier_76.jpg",
+    "true": "Staffordshire Bull Terrier",
+    "pred": "Beagle",
+    "confidence": 0.5194578170776367,
+    "prob_true": 0.18159298598766327,
+    "top3": [
+      [
+        "Beagle",
+        0.5194578170776367
+      ],
+      [
+        "German Shorthaired",
+        0.18577457964420319
+      ],
+      [
+        "Staffordshire Bull Terrier",
+        0.18159298598766327
+      ]
+    ]
+  },
+  {
+    "image_id": "oxford-iiit-pet/images/Maine_Coon_239.jpg",
+    "true": "Maine Coon",
+    "pred": "Persian",
+    "confidence": 0.749675452709198,
+    "prob_true": 0.04172984138131142,
+    "top3": [
+      [
+        "Persian",
+        0.749675452709198
+      ],
+      [
+        "Bengal",
+        0.10398166626691818
+      ],
+      [
+        "Bombay",
+        0.05327438935637474
+      ]
+    ]
+  },
+  {
+    "image_id": "oxford-iiit-pet/images/staffordshire_bull_terrier_26.jpg",
+    "true": "Staffordshire Bull Terrier",
+    "pred": "German Shorthaired",
+    "confidence": 0.8530856370925903,
+    "prob_true": 0.06694505363702774,
+    "top3": [
+      [
+        "German Shorthaired",
+        0.8530856370925903
+      ],
+      [
+        "Staffordshire Bull Terrier",
+        0.06694505363702774
+      ],
+      [
+        "Boxer",
+        0.0369025357067585
+      ]
+    ]
+  },
+  {
+    "image_id": "oxford-iiit-pet/images/staffordshire_bull_terrier_82.jpg",
+    "true": "Staffordshire Bull Terrier",
+    "pred": "American Bulldog",
+    "confidence": 0.9549675583839417,
+    "prob_true": 0.0195208378136158,
+    "top3": [
+      [
+        "American Bulldog",
+        0.9549675583839417
+      ],
+      [
+        "American Pit Bull Terrier",
+        0.025197716429829597
+      ],
+      [
+        "Staffordshire Bull Terrier",
+        0.0195208378136158
+      ]
+    ]
+  },
+  {
+    "image_id": "oxford-iiit-pet/images/chihuahua_84.jpg",
+    "true": "Chihuahua",
+    "pred": "Shiba Inu",
+    "confidence": 0.598945140838623,
+    "prob_true": 0.020107440650463104,
+    "top3": [
+      [
+        "Shiba Inu",
+        0.598945140838623
+      ],
+      [
+        "Beagle",
+        0.37595945596694946
+      ],
+      [
+        "Chihuahua",
+        0.020107440650463104
+      ]
+    ]
+  },
+  {
+    "image_id": "oxford-iiit-pet/images/american_pit_bull_terrier_33.jpg",
+    "true": "American Pit Bull Terrier",
+    "pred": "American Bulldog",
+    "confidence": 0.731339693069458,
+    "prob_true": 0.22112712264060974,
+    "top3": [
+      [
+        "American Bulldog",
+        0.731339693069458
+      ],
+      [
+        "American Pit Bull Terrier",
+        0.22112712264060974
+      ],
+      [
+        "Staffordshire Bull Terrier",
+        0.045910127460956573
+      ]
+    ]
+  }
+]

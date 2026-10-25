@@ -1,0 +1,746 @@
+{
+  "finetune_sgd100": {
+    "analysis.confidence.t50.accuracy": [
+      0.9107797524454162,
+      0.005133001149930458,
+      5
+    ],
+    "analysis.confidence.t50.coverage": [
+      0.9635322976287817,
+      0.001717305424041818,
+      5
+    ],
+    "analysis.confidence.t50.n": [
+      3535.2,
+      6.300793600809345,
+      5
+    ],
+    "analysis.confidence.t60.accuracy": [
+      0.9271836697714969,
+      0.0041779140283093935,
+      5
+    ],
+    "analysis.confidence.t60.coverage": [
+      0.9282093213409649,
+      0.004904454507179313,
+      5
+    ],
+    "analysis.confidence.t60.n": [
+      3405.6,
+      17.994443586840912,
+      5
+    ],
+    "analysis.confidence.t70.accuracy": [
+      0.9399700400598905,
+      0.0046677325121225145,
+      5
+    ],
+    "analysis.confidence.t70.coverage": [
+      0.8914690651403653,
+      0.006222350798637652,
+      5
+    ],
+    "analysis.confidence.t70.n": [
+      3270.8,
+      22.829805080201627,
+      5
+    ],
+    "analysis.confidence.t80.accuracy": [
+      0.953944020704405,
+      0.0036835981819008166,
+      5
+    ],
+    "analysis.confidence.t80.coverage": [
+      0.8458435541019351,
+      0.009740892361204357,
+      5
+    ],
+    "analysis.confidence.t80.n": [
+      3103.4,
+      35.73933407325884,
+      5
+    ],
+    "analysis.confidence.t90.accuracy": [
+      0.9694831600625825,
+      0.004435972501092048,
+      5
+    ],
+    "analysis.confidence.t90.coverage": [
+      0.7688198419187791,
+      0.012011555799479242,
+      5
+    ],
+    "analysis.confidence.t90.n": [
+      2820.8,
+      44.07039822828925,
+      5
+    ],
+    "analysis.confidence.t95.accuracy": [
+      0.9790686651964331,
+      0.0038394115063730763,
+      5
+    ],
+    "analysis.confidence.t95.coverage": [
+      0.6944126464976833,
+      0.014603138120137768,
+      5
+    ],
+    "analysis.confidence.t95.n": [
+      2547.8,
+      53.57891376278545,
+      5
+    ],
+    "analysis.species.cross_species_errors": [
+      32.0,
+      4.415880433163924,
+      5
+    ],
+    "analysis.species.n_errors": [
+      395.6,
+      20.586403279834972,
+      5
+    ],
+    "analysis.species.same_species_error_share": [
+      0.9192474405375866,
+      0.009436404947940418,
+      5
+    ],
+    "analysis.species.same_species_errors": [
+      363.6,
+      18.07761046156267,
+      5
+    ],
+    "analysis.species.species_accuracy": [
+      0.9912782774597984,
+      0.001203565122148801,
+      5
+    ],
+    "baselines.majority.macro_f1": [
+      0.0012801518921795665,
+      0.0,
+      5
+    ],
+    "baselines.majority.top1": [
+      0.02425729081493595,
+      0.0,
+      5
+    ],
+    "baselines.random_retrieval.p@1": [
+      0.025074952303079857,
+      0.0,
+      5
+    ],
+    "baselines.random_retrieval.p@10": [
+      0.02673753066230581,
+      3.878959614448864e-18,
+      5
+    ],
+    "baselines.random_retrieval.p@5": [
+      0.02747342600163532,
+      3.878959614448864e-18,
+      5
+    ],
+    "classification.ece": [
+      0.02664597549923241,
+      0.006464772426881114,
+      5
+    ],
+    "classification.macro_f1": [
+      0.8906099170055043,
+      0.005570860032925392,
+      5
+    ],
+    "classification.macro_precision": [
+      0.8961147858866056,
+      0.0047889510515170515,
+      5
+    ],
+    "classification.macro_recall": [
+      0.8916348736917319,
+      0.005600176357865635,
+      5
+    ],
+    "classification.mean_confidence": [
+      0.9164961457252503,
+      0.0043716878650274,
+      5
+    ],
+    "classification.n": [
+      3669.0,
+      0.0,
+      5
+    ],
+    "classification.top1": [
+      0.8921777050967566,
+      0.005610903047106827,
+      5
+    ],
+    "classification.top5": [
+      0.9898064867811394,
+      0.0014499248926977926,
+      5
+    ],
+    "embedding_dim": [
+      512.0,
+      0.0,
+      5
+    ],
+    "n_test": [
+      3669.0,
+      0.0,
+      5
+    ],
+    "retrieval.embedding.all.cosine.p@1": [
+      0.9161624420823111,
+      0.003170306028584423,
+      5
+    ],
+    "retrieval.embedding.all.cosine.p@10": [
+      0.8919596620332516,
+      0.0029483093974966264,
+      5
+    ],
+    "retrieval.embedding.all.cosine.p@5": [
+      0.8991768874352684,
+      0.0031532958599992627,
+      5
+    ],
+    "retrieval.embedding.all.euclid.p@1": [
+      0.9093485963477785,
+      0.0037942782350056958,
+      5
+    ],
+    "retrieval.embedding.all.euclid.p@10": [
+      0.8808776233306078,
+      0.0023475730753852566,
+      5
+    ],
+    "retrieval.embedding.all.euclid.p@5": [
+      0.890978468247479,
+      0.0020098881509497393,
+      5
+    ],
+    "retrieval.embedding.test.cosine.p@1": [
+      0.9092395748160262,
+      0.0018079175744646452,
+      5
+    ],
+    "retrieval.embedding.test.cosine.p@10": [
+      0.8791169255928045,
+      0.002050720804012135,
+      5
+    ],
+    "retrieval.embedding.test.cosine.p@5": [
+      0.8897465249386756,
+      0.00283471706379828,
+      5
+    ],
+    "retrieval.embedding.test.euclid.p@1": [
+      0.9017715998909785,
+      0.002045062031322314,
+      5
+    ],
+    "retrieval.embedding.test.euclid.p@10": [
+      0.8625620059961843,
+      0.0034506649555643806,
+      5
+    ],
+    "retrieval.embedding.test.euclid.p@5": [
+      0.8775143090760424,
+      0.0029408040358667653,
+      5
+    ],
+    "retrieval.embedding.trainval.cosine.p@1": [
+      0.8932134096484056,
+      0.0039279914745824936,
+      5
+    ],
+    "retrieval.embedding.trainval.cosine.p@10": [
+      0.8784137367130009,
+      0.0018237700754861303,
+      5
+    ],
+    "retrieval.embedding.trainval.cosine.p@5": [
+      0.8851022076860179,
+      0.0024799103648122595,
+      5
+    ],
+    "retrieval.embedding.trainval.euclid.p@1": [
+      0.8875442899972745,
+      0.004017742984255291,
+      5
+    ],
+    "retrieval.embedding.trainval.euclid.p@10": [
+      0.8673371490869446,
+      0.0020920703588411358,
+      5
+    ],
+    "retrieval.embedding.trainval.euclid.p@5": [
+      0.8766639411283729,
+      0.0016830502412179679,
+      5
+    ],
+    "retrieval.pixels.all.cosine.p@1": [
+      0.09212319433088034,
+      0.0,
+      5
+    ],
+    "retrieval.pixels.all.cosine.p@10": [
+      0.0556282365767239,
+      0.0,
+      5
+    ],
+    "retrieval.pixels.all.cosine.p@5": [
+      0.06410466067048241,
+      0.0,
+      5
+    ],
+    "retrieval.pixels.all.euclid.p@1": [
+      0.08994276369582993,
+      0.0,
+      5
+    ],
+    "retrieval.pixels.all.euclid.p@10": [
+      0.056854728808939756,
+      7.757919228897728e-18,
+      5
+    ],
+    "retrieval.pixels.all.euclid.p@5": [
+      0.062305805396565814,
+      7.757919228897728e-18,
+      5
+    ],
+    "retrieval.pixels.test.cosine.p@1": [
+      0.08421913327882256,
+      0.0,
+      5
+    ],
+    "retrieval.pixels.test.cosine.p@10": [
+      0.052303079858272004,
+      7.757919228897728e-18,
+      5
+    ],
+    "retrieval.pixels.test.cosine.p@5": [
+      0.057835922594712465,
+      7.757919228897728e-18,
+      5
+    ],
+    "retrieval.pixels.test.euclid.p@1": [
+      0.07958571817934042,
+      0.0,
+      5
+    ],
+    "retrieval.pixels.test.euclid.p@10": [
+      0.05609157808667211,
+      7.757919228897728e-18,
+      5
+    ],
+    "retrieval.pixels.test.euclid.p@5": [
+      0.06132461161079313,
+      0.0,
+      5
+    ],
+    "retrieval.pixels.trainval.cosine.p@1": [
+      0.06922867266285092,
+      0.0,
+      5
+    ],
+    "retrieval.pixels.trainval.cosine.p@10": [
+      0.046524938675388386,
+      0.0,
+      5
+    ],
+    "retrieval.pixels.trainval.cosine.p@5": [
+      0.052330335241210134,
+      7.757919228897728e-18,
+      5
+    ],
+    "retrieval.pixels.trainval.euclid.p@1": [
+      0.06922867266285092,
+      0.0,
+      5
+    ],
+    "retrieval.pixels.trainval.euclid.p@10": [
+      0.04775143090760425,
+      0.0,
+      5
+    ],
+    "retrieval.pixels.trainval.euclid.p@5": [
+      0.05178522758244754,
+      7.757919228897728e-18,
+      5
+    ]
+  },
+  "scratch_sgd100": {
+    "analysis.confidence.t50.accuracy": [
+      0.7711445112042887,
+      0.005275894043203583,
+      5
+    ],
+    "analysis.confidence.t50.coverage": [
+      0.8758789860997547,
+      0.004476857397531142,
+      5
+    ],
+    "analysis.confidence.t50.n": [
+      3213.6,
+      16.425589791541732,
+      5
+    ],
+    "analysis.confidence.t60.accuracy": [
+      0.8042481103491864,
+      0.00449551517861598,
+      5
+    ],
+    "analysis.confidence.t60.coverage": [
+      0.7998364677023713,
+      0.007119343930157788,
+      5
+    ],
+    "analysis.confidence.t60.n": [
+      2934.6,
+      26.12087287974887,
+      5
+    ],
+    "analysis.confidence.t70.accuracy": [
+      0.8385599863922104,
+      0.004636975459532335,
+      5
+    ],
+    "analysis.confidence.t70.coverage": [
+      0.7274461706186972,
+      0.010102890702017265,
+      5
+    ],
+    "analysis.confidence.t70.n": [
+      2669.0,
+      37.067505985701274,
+      5
+    ],
+    "analysis.confidence.t80.accuracy": [
+      0.8730523334838909,
+      0.004234488097599611,
+      5
+    ],
+    "analysis.confidence.t80.coverage": [
+      0.6498228400109022,
+      0.008010022721916768,
+      5
+    ],
+    "analysis.confidence.t80.n": [
+      2384.2,
+      29.388773366712673,
+      5
+    ],
+    "analysis.confidence.t90.accuracy": [
+      0.911854056338084,
+      0.004586796116237984,
+      5
+    ],
+    "analysis.confidence.t90.coverage": [
+      0.5461433633142546,
+      0.007477617503293932,
+      5
+    ],
+    "analysis.confidence.t90.n": [
+      2003.8,
+      27.435378619585332,
+      5
+    ],
+    "analysis.confidence.t95.accuracy": [
+      0.9397946353810995,
+      0.005718383954277826,
+      5
+    ],
+    "analysis.confidence.t95.coverage": [
+      0.4617606977378032,
+      0.004963922861334957,
+      5
+    ],
+    "analysis.confidence.t95.n": [
+      1694.2,
+      18.212632978237934,
+      5
+    ],
+    "analysis.species.cross_species_errors": [
+      181.8,
+      7.259476565152614,
+      5
+    ],
+    "analysis.species.n_errors": [
+      1066.2,
+      30.678983033992505,
+      5
+    ],
+    "analysis.species.same_species_error_share": [
+      0.8294069080937941,
+      0.007698230827901508,
+      5
+    ],
+    "analysis.species.same_species_errors": [
+      884.4,
+      30.021658848238214,
+      5
+    ],
+    "analysis.species.species_accuracy": [
+      0.9504497138184792,
+      0.0019785981371361642,
+      5
+    ],
+    "baselines.majority.macro_f1": [
+      0.0012801518921795665,
+      0.0,
+      5
+    ],
+    "baselines.majority.top1": [
+      0.02425729081493595,
+      0.0,
+      5
+    ],
+    "baselines.random_retrieval.p@1": [
+      0.025074952303079857,
+      0.0,
+      5
+    ],
+    "baselines.random_retrieval.p@10": [
+      0.02673753066230581,
+      3.878959614448864e-18,
+      5
+    ],
+    "baselines.random_retrieval.p@5": [
+      0.02747342600163532,
+      3.878959614448864e-18,
+      5
+    ],
+    "classification.ece": [
+      0.10920191588665622,
+      0.004891195562334008,
+      5
+    ],
+    "classification.macro_f1": [
+      0.7054629902985085,
+      0.009127829804405374,
+      5
+    ],
+    "classification.macro_precision": [
+      0.71080064965193,
+      0.010010982244036147,
+      5
+    ],
+    "classification.macro_recall": [
+      0.7086828271835139,
+      0.008388544685455109,
+      5
+    ],
+    "classification.mean_confidence": [
+      0.8185234904289246,
+      0.003961457426608282,
+      5
+    ],
+    "classification.n": [
+      3669.0,
+      0.0,
+      5
+    ],
+    "classification.top1": [
+      0.709403107113655,
+      0.008361674307438676,
+      5
+    ],
+    "classification.top5": [
+      0.9282638321068412,
+      0.005314450233461501,
+      5
+    ],
+    "embedding_dim": [
+      512.0,
+      0.0,
+      5
+    ],
+    "n_test": [
+      3669.0,
+      0.0,
+      5
+    ],
+    "retrieval.embedding.all.cosine.p@1": [
+      0.6985009539384028,
+      0.010649498115696654,
+      5
+    ],
+    "retrieval.embedding.all.cosine.p@10": [
+      0.6590569637503407,
+      0.010912886512561996,
+      5
+    ],
+    "retrieval.embedding.all.cosine.p@5": [
+      0.6724121013900246,
+      0.010502740779675121,
+      5
+    ],
+    "retrieval.embedding.all.euclid.p@1": [
+      0.6702643772144999,
+      0.015004577213020261,
+      5
+    ],
+    "retrieval.embedding.all.euclid.p@10": [
+      0.622769146906514,
+      0.010966805436836414,
+      5
+    ],
+    "retrieval.embedding.all.euclid.p@5": [
+      0.6393567729626601,
+      0.01080159401315806,
+      5
+    ],
+    "retrieval.embedding.test.cosine.p@1": [
+      0.6710820387026437,
+      0.010388198903701048,
+      5
+    ],
+    "retrieval.embedding.test.cosine.p@10": [
+      0.6113927500681384,
+      0.011198165221683425,
+      5
+    ],
+    "retrieval.embedding.test.cosine.p@5": [
+      0.6339602071409103,
+      0.011852488307506608,
+      5
+    ],
+    "retrieval.embedding.test.euclid.p@1": [
+      0.6431180158081221,
+      0.015027086750587119,
+      5
+    ],
+    "retrieval.embedding.test.euclid.p@10": [
+      0.5715453802125919,
+      0.011153763887178043,
+      5
+    ],
+    "retrieval.embedding.test.euclid.p@5": [
+      0.5981466339602072,
+      0.012140980617208513,
+      5
+    ],
+    "retrieval.embedding.trainval.cosine.p@1": [
+      0.692668301989643,
+      0.013481913120651532,
+      5
+    ],
+    "retrieval.embedding.trainval.cosine.p@10": [
+      0.6691632597437993,
+      0.010794656047797087,
+      5
+    ],
+    "retrieval.embedding.trainval.cosine.p@5": [
+      0.6780921231943309,
+      0.009895213073814803,
+      5
+    ],
+    "retrieval.embedding.trainval.euclid.p@1": [
+      0.6649223221586263,
+      0.011801297554254013,
+      5
+    ],
+    "retrieval.embedding.trainval.euclid.p@10": [
+      0.6382447533387844,
+      0.010333374421569935,
+      5
+    ],
+    "retrieval.embedding.trainval.euclid.p@5": [
+      0.6496266012537476,
+      0.00984040871036868,
+      5
+    ],
+    "retrieval.pixels.all.cosine.p@1": [
+      0.09212319433088034,
+      0.0,
+      5
+    ],
+    "retrieval.pixels.all.cosine.p@10": [
+      0.0556282365767239,
+      0.0,
+      5
+    ],
+    "retrieval.pixels.all.cosine.p@5": [
+      0.06410466067048241,
+      0.0,
+      5
+    ],
+    "retrieval.pixels.all.euclid.p@1": [
+      0.08994276369582993,
+      0.0,
+      5
+    ],
+    "retrieval.pixels.all.euclid.p@10": [
+      0.056854728808939756,
+      7.757919228897728e-18,
+      5
+    ],
+    "retrieval.pixels.all.euclid.p@5": [
+      0.062305805396565814,
+      7.757919228897728e-18,
+      5
+    ],
+    "retrieval.pixels.test.cosine.p@1": [
+      0.08421913327882256,
+      0.0,
+      5
+    ],
+    "retrieval.pixels.test.cosine.p@10": [
+      0.052303079858272004,
+      7.757919228897728e-18,
+      5
+    ],
+    "retrieval.pixels.test.cosine.p@5": [
+      0.057835922594712465,
+      7.757919228897728e-18,
+      5
+    ],
+    "retrieval.pixels.test.euclid.p@1": [
+      0.07958571817934042,
+      0.0,
+      5
+    ],
+    "retrieval.pixels.test.euclid.p@10": [
+      0.05609157808667211,
+      7.757919228897728e-18,
+      5
+    ],
+    "retrieval.pixels.test.euclid.p@5": [
+      0.06132461161079313,
+      0.0,
+      5
+    ],
+    "retrieval.pixels.trainval.cosine.p@1": [
+      0.06922867266285092,
+      0.0,
+      5
+    ],
+    "retrieval.pixels.trainval.cosine.p@10": [
+      0.046524938675388386,
+      0.0,
+      5
+    ],
+    "retrieval.pixels.trainval.cosine.p@5": [
+      0.052330335241210134,
+      7.757919228897728e-18,
+      5
+    ],
+    "retrieval.pixels.trainval.euclid.p@1": [
+      0.06922867266285092,
+      0.0,
+      5
+    ],
+    "retrieval.pixels.trainval.euclid.p@10": [
+      0.04775143090760425,
+      0.0,
+      5
+    ],
+    "retrieval.pixels.trainval.euclid.p@5": [
+      0.05178522758244754,
+      7.757919228897728e-18,
+      5
+    ]
+  }
+}
