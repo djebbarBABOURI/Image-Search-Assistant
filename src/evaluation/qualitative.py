@@ -77,7 +77,7 @@ def main():
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     rows = random_errors(ex, args.n, args.seed)
-    (out / "errors.json").write_text(json.dumps(rows, indent=2, ensure_ascii=False))
+    (out / "errors.json").write_text(json.dumps(rows, indent=2, ensure_ascii=False), encoding="utf-8")
     plot_errors(rows, args.data_dir, out / "errors.png")
     plot_retrieval(ex, args.data_dir, out / "retrieval_examples.png", seed=args.seed)
     print(f"{len(rows)} erreurs aléatoires -> {out/'errors.png'} ; recherche -> {out/'retrieval_examples.png'}")
