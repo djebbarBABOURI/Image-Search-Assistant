@@ -20,10 +20,12 @@ async def run_agent(
     messages: list[dict],
     model: str | None = None,
     on_tool=None,
+    options: dict | None = None,
 ) -> tuple[str, list[dict]]:
     """Renvoie (réponse, trace des outils appelés).
 
     on_tool : callback optionnel appelé après chaque appel d'outil.
+    options : options Ollama (ex. {"temperature": 0} pour l'évaluation).
     """
     model = model or MODEL
     messages = [{"role": "system", "content": SYSTEM}, *messages]
@@ -38,6 +40,7 @@ async def run_agent(
                     "messages": messages,
                     "tools": ollama_tools,
                     "stream": False,
+                    **({"options": options} if options else {}),
                 },
             )
             if r.status_code != 200:
@@ -55,7 +58,10 @@ async def run_agent(
                 fn = call["function"]
                 args = fn.get("arguments") or {}
                 if isinstance(args, str):
-                    args = json.loads(args)
+                    try:
+                        args = json.loads(args)
+                    except json.JSONDecodeError:
+                        args = {}
                 output = await call_tool(session, fn["name"], args)
                 entry = {"name": fn["name"], "args": args, "result": output}
                 trace.append(entry)
