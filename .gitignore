@@ -24,3 +24,5 @@ data/*.npz
 uploads/
 static/uploads/
 data/uploads/
+# Raccourcis Windows
+*.lnk
