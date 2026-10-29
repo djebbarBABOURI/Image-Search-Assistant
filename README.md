@@ -11,6 +11,7 @@ Serveur [MCP](https://modelcontextprotocol.io/) de classification d'images basé
 - [Lancement](#lancement)
 - [Outils, ressources et prompts MCP](#outils-ressources-et-prompts-mcp)
 - [Chatbot : LLM, prompt et évaluation des appels d'outils](#chatbot--llm-prompt-et-évaluation-des-appels-doutils)
+- [Entraînement et export du modèle spécialiste](#entraînement-et-export-du-modèle-spécialiste)
 - [Évaluation des modèles et recherche](#évaluation-des-modèles-et-recherche)
 - [Structure du projet](#structure-du-projet)
 
@@ -18,7 +19,7 @@ Serveur [MCP](https://modelcontextprotocol.io/) de classification d'images basé
 
 - Python 3.10 ou plus récent
 - [uv](https://docs.astral.sh/uv/)
-- Le modèle entraîné : `models/model.pt`
+- Le modèle entraîné : `models/model.pt` (voir [Checkpoints et exports fournis](#checkpoints-et-exports-fournis))
 - Les images : `data/images/` (`.jpg`, `.jpeg`, `.png`)
 
 ## Installation
@@ -187,6 +188,159 @@ Les tests de la logique de score ne demandent ni Ollama ni le serveur :
 python -m pytest tests/test_chatbot_scoring.py
 ```
 
+## Entraînement et export du modèle spécialiste
+
+Le dossier `src/training/` entraîne le modèle spécialiste (ResNet-18 de torchvision) sur Oxford-IIIT Pets, puis exporte ses prédictions et ses embeddings pour l'évaluation.
+
+| Fichier | Rôle |
+|---|---|
+| `src/training/train.py` | Entraînement en mode `finetune` (poids ImageNet) ou `scratch` (poids aléatoires) |
+| `src/training/export.py` | Export des probabilités et des embeddings de toutes les images dans un fichier `.npz` |
+| `src/export_format.py` | Format commun des exports, lu par l'évaluation |
+| `training_runs/` | Résultats (`results.json`) de toutes les expériences d'entraînement, avec un README qui les résume |
+
+### Installation
+
+L'entraînement a besoin de PyTorch et de torchvision. Depuis la racine du projet :
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate          # Windows : .venv\Scripts\activate
+pip install torch torchvision "numpy<2"
+```
+
+Testé avec Python 3.12, PyTorch 2.2.2 et torchvision 0.17.2, sur CPU (MacBook Pro Intel).
+Sur un Mac Intel, PyTorch ne s'installe pas avec Python 3.13 ou 3.14 : utilisez Python 3.12 et `pip install torch==2.2.2 torchvision==0.17.2 "numpy<2"`.
+
+### Données
+
+Aucun téléchargement manuel : au premier lancement, `train.py` télécharge Oxford-IIIT Pets (environ 800 Mo) dans `data/oxford-iiit-pet/` grâce à `torchvision.datasets.OxfordIIITPet`.
+
+- Le découpage officiel est utilisé : 3 680 images `trainval` et 3 669 images `test`.
+- `trainval` est découpé en 85 % entraînement (3 128 images) et 15 % validation (552 images), avec une graine fixe (`SPLIT_SEED = 42`) : le découpage est identique pour tous les entraînements et tous les membres du groupe.
+- La validation sert à choisir le meilleur modèle (meilleure accuracy top-1) et à décider de l'arrêt anticipé. Le test n'est évalué qu'une seule fois, à la fin, sur le modèle choisi.
+
+### Reproduire le réglage final
+
+Réglage final : SGD avec momentum 0,9, warm-up de 5 époques puis scheduler cosinus, weight decay 5e-4, 100 époques au maximum avec early stopping (patience 15), batch de 32 images en 224 × 224, augmentation de données (recadrage aléatoire, retournement horizontal, variations de couleur, rotation, effacement aléatoire).
+
+```bash
+# From scratch (learning rate de départ 0,025)
+python -m src.training.train --mode scratch --seed 0 --epochs 100 --optimizer sgd --lr 0.025 --weight-decay 5e-4 --warmup 5 --patience 15 --out-dir training_runs/7_sgd_100ep_final
+
+# Fine-tuning (learning rate de départ 0,0025)
+python -m src.training.train --mode finetune --seed 0 --epochs 100 --optimizer sgd --lr 0.0025 --weight-decay 5e-4 --warmup 5 --patience 15 --out-dir training_runs/7_sgd_100ep_final
+```
+
+Les résultats ont été obtenus avec les seeds 0 à 4. Pour toutes les lancer à la suite :
+
+```bash
+# Linux et macOS
+for s in 0 1 2 3 4; do
+  python -m src.training.train --mode scratch  --seed $s --epochs 100 --optimizer sgd --lr 0.025  --weight-decay 5e-4 --warmup 5 --patience 15 --out-dir training_runs/7_sgd_100ep_final
+  python -m src.training.train --mode finetune --seed $s --epochs 100 --optimizer sgd --lr 0.0025 --weight-decay 5e-4 --warmup 5 --patience 15 --out-dir training_runs/7_sgd_100ep_final
+done
+```
+
+```powershell
+# PowerShell
+foreach ($s in 0..4) {
+  python -m src.training.train --mode scratch  --seed $s --epochs 100 --optimizer sgd --lr 0.025  --weight-decay 5e-4 --warmup 5 --patience 15 --out-dir training_runs/7_sgd_100ep_final
+  python -m src.training.train --mode finetune --seed $s --epochs 100 --optimizer sgd --lr 0.0025 --weight-decay 5e-4 --warmup 5 --patience 15 --out-dir training_runs/7_sgd_100ep_final
+}
+```
+
+Durée sur CPU : environ 4 à 5 minutes par époque, soit environ 7 à 8 heures pour un entraînement from scratch et 2 à 4 heures pour un fine-tuning (arrêté plus tôt par l'early stopping). Sur macOS, `caffeinate -i` devant la commande empêche la mise en veille pendant l'entraînement.
+
+Chaque entraînement écrit dans `<out-dir>/<mode>_seed<seed>/` :
+
+| Fichier | Contenu |
+|---|---|
+| `model.pt` | Poids du meilleur modèle (meilleure accuracy de validation) |
+| `results.json` | Réglages utilisés, courbes par époque (loss, accuracy, learning rate), époque du meilleur modèle, époque d'arrêt, accuracy top-1 et top-5 sur le test |
+
+### Options de `train.py`
+
+| Option | Défaut | Rôle |
+|---|---|---|
+| `--mode` | obligatoire | `finetune` (poids ImageNet) ou `scratch` (poids aléatoires) |
+| `--seed` | 0 | Graine aléatoire (ordre des images, augmentations, initialisation) |
+| `--epochs` | 50 | Nombre maximal d'époques |
+| `--batch-size` | 32 | Taille des batchs |
+| `--lr` | 1e-4 (finetune), 1e-3 (scratch) | Learning rate de départ |
+| `--optimizer` | `adamw` | `adamw` ou `sgd` (SGD avec momentum 0,9) |
+| `--weight-decay` | 0.01 | Weight decay |
+| `--warmup` | 0 | Nombre d'époques de warm-up avant le scheduler cosinus |
+| `--patience` | 10 | Early stopping : nombre d'époques sans amélioration de la validation (0 pour désactiver) |
+| `--augment` | `standard` | `standard` (variations de couleur et rotation) ou `trivial` (TrivialAugmentWide) |
+| `--label-smoothing` | 0.0 | Label smoothing de la loss |
+| `--mixup` | désactivé | Active MixUp ou CutMix sur chaque batch |
+| `--data-dir` | `data` | Dossier du dataset |
+| `--out-dir` | `runs` | Dossier de sortie |
+
+Les valeurs par défaut correspondent au réglage intermédiaire à 50 époques : le réglage final passe ses options explicitement (voir plus haut).
+
+### Exporter un modèle pour l'évaluation
+
+```bash
+python -m src.training.export --run training_runs/7_sgd_100ep_final/finetune_seed2 --out data/export_finetune_sgd100_seed2.npz
+```
+
+L'export recharge le `model.pt` du dossier indiqué, calcule pour les 7 349 images les probabilités des 37 races et l'embedding (vecteur de 512 nombres pris avant la dernière couche), puis écrit un fichier `.npz` d'environ 14 Mo. Il recalcule aussi l'accuracy sur le test et vérifie qu'elle correspond à `test_top1` dans `results.json`.
+
+Pour exporter les 10 modèles du réglage final, avec les noms attendus par `src/evaluation/run_all.py` :
+
+```bash
+# Linux et macOS
+for m in finetune scratch; do
+  for s in 0 1 2 3 4; do
+    python -m src.training.export --run training_runs/7_sgd_100ep_final/${m}_seed$s --out data/export_${m}_sgd100_seed$s.npz
+  done
+done
+```
+
+```powershell
+# PowerShell
+foreach ($m in "finetune", "scratch") {
+  foreach ($s in 0..4) {
+    python -m src.training.export --run training_runs/7_sgd_100ep_final/${m}_seed$s --out data/export_${m}_sgd100_seed$s.npz
+  }
+}
+```
+
+Les chemins des images stockés dans ces exports commencent par `oxford-iiit-pet/images/` : pour l'évaluation avec images, utilisez `--data-dir data` (le dossier qui contient `oxford-iiit-pet/`).
+
+### Checkpoints et exports fournis
+
+Les poids des modèles (fichiers `model.pt` d'environ 43 Mo) et les exports (`.npz` d'environ 14 Mo) ne sont pas versionnés dans Git et ne peuvent pas être joints à l'archive (limite de 50 Mo par fichier sur Moodle). Ceux du réglage final sont disponibles sur Google Drive, en lecture seule :
+
+https://drive.google.com/drive/folders/1r4YiyYaa79OIBZwgzJATQsJZXxvrLSwS?usp=sharing
+
+| Dossier du Drive | Contenu | À copier dans |
+|---|---|---|
+| `7_sgd_100ep_final/` | les 10 modèles du réglage final (`<mode>_seed<k>/model.pt` et `results.json`) | `training_runs/` |
+| `exports/` | les 10 exports `export_<mode>_sgd100_seed<k>.npz` | `data/` |
+
+Avec les exports, les métriques se recalculent directement avec `src/evaluation/run_all.py`, sans PyTorch ni réentraînement (voir [Évaluation des modèles et recherche](#évaluation-des-modèles-et-recherche)).
+
+Le serveur MCP utilise `models/model.pt`, qui est le meilleur modèle (fine-tuning seed 2, 90,1 % top-1 sur le test). Après avoir copié les checkpoints :
+
+```bash
+mkdir -p models
+cp training_runs/7_sgd_100ep_final/finetune_seed2/model.pt models/model.pt
+```
+
+Les résultats des expériences intermédiaires (dossiers 1 à 6 de `training_runs/`) sont versionnés dans leurs fichiers `results.json`. Leurs checkpoints ne sont pas fournis.
+
+### Résultats de l'entraînement (réglage final, 5 seeds, test)
+
+| Mode | Top-1 | Top-5 |
+|---|---|---|
+| Fine-tuning | 89,2 ± 0,6 % | 99,0 ± 0,1 % |
+| From scratch | 70,9 ± 0,8 % | 92,8 ± 0,5 % |
+
+La progression de toutes les expériences (5, 30, 50 et 100 époques, tests de régularisation, changement d'optimiseur) est résumée dans `training_runs/README.md`.
+
 ## Évaluation des modèles et recherche
 
 Le dossier `src/evaluation/` évalue les modèles entraînés sur Oxford-IIIT Pets. Il lit les exports `.npz` produits par `src/training/`, calcule les métriques, les baselines et les analyses d'erreurs, puis agrège les seeds (moyenne ± écart-type).
@@ -338,12 +492,15 @@ Dans `summary.md`, les clés ont la forme `retrieval.embedding.test.cosine.p@5` 
 image-search-assistant/
 ├── data/
 │   ├── images/            images (non versionnées)
+│   ├── oxford-iiit-pet/   dataset téléchargé par l'entraînement (non versionné)
 │   ├── export_<config>_seed<k>.npz   exports des modèles (non versionnés)
 │   └── pixels_32.npy      cache de la baseline pixels (généré)
 ├── models/                model.pt, pets_cache.npz (non versionnés)
 ├── runs/                  résultats d'évaluation (runs/chatbot/ pour le chatbot)
+├── training_runs/         résultats des entraînements (results.json), un dossier par expérience
 ├── src/
 │   ├── search_index.py    chargement du modèle, images, prédiction
+│   ├── export_format.py   format commun des exports .npz
 │   ├── mcp_server/        serveur MCP
 │   ├── chatbot/           client LLM, prompt, évaluation des appels d'outils
 │   ├── evaluation/        métriques, recherche, baselines, agrégation
@@ -356,6 +513,8 @@ image-search-assistant/
 │   │   ├── aggregate.py     moyenne ± écart-type sur les seeds, tableaux Markdown et JSON
 │   │   └── run_all.py       orchestration : exports, figures, tableaux
 │   └── training/          entraînement et export
+│       ├── train.py         entraînement du ResNet-18 (finetune ou scratch)
+│       └── export.py        export des probabilités et des embeddings (.npz)
 ├── tests/                 tests pytest et requêtes de test du chatbot
 ├── tools/                 scripts utilitaires
 ├── requirements.txt
