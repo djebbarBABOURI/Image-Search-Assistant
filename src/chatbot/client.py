@@ -14,12 +14,26 @@ from mcp.client.streamable_http import streamable_http_client as http_client
 
 from agent import OllamaError, run_agent
 from config import MCP_URL, OLLAMA_HOST, MODEL
-from mcp_tools import HIDDEN, to_ollama_tools
-
+from mcp_tools import (
+    HIDDEN,
+    UNKNOWN,
+    attr,
+    prompt_text,
+    read_resource,
+    resolve_resources,
+    to_ollama_tools,
+)
 STATIC_DIR = Path(__file__).parent / "static"
 IMAGE_ID = re.compile(r"^[\w.\- ]{1,120}$")
-
+RESOURCE_URI = re.compile(r"^pets://[\w\-./]{1,200}$")
 state: dict = {}
+
+async def safe_list(call, *names) -> list:
+    """Liste renvoyée par le serveur MCP, ou [] s'il ne la propose pas."""
+    try:
+        return list(attr(await call, *names, default=[]))
+    except Exception:
+        return []
 
 
 @asynccontextmanager
@@ -32,7 +46,16 @@ async def lifespan(app: FastAPI):
         state["session"] = session
         state["tools"] = tools
         state["ollama_tools"] = to_ollama_tools(tools)
-        print(f"MCP connecté : {[t.name for t in tools]}")
+        state["prompts"] = await safe_list(session.list_prompts(), "prompts")
+        state["resources"] = await safe_list(session.list_resources(), "resources")
+        state["templates"] = await safe_list(
+            session.list_resource_templates(), "resourceTemplates", "resource_templates"
+        )
+        print(
+            f"MCP connecté : {[t.name for t in tools]} | "
+            f"{len(state['prompts'])} prompts, {len(state['resources'])} ressources, "
+            f"{len(state['templates'])} modèles de ressource"
+        )
         yield
 
 
@@ -56,6 +79,89 @@ async def tools():
         for t in state["tools"]
         if t.name not in HIDDEN
     ]
+
+@app.get("/api/prompts")
+async def prompts():
+    return [
+        {
+            "name": p.name,
+            "description": p.description,
+            "arguments": [
+                {
+                    "name": a.name,
+                    "description": a.description,
+                    "required": bool(a.required),
+                }
+                for a in (p.arguments or [])
+            ],
+        }
+        for p in state["prompts"]
+    ]
+
+
+@app.post("/api/prompts/{name}")
+async def run_prompt(name: str, body: dict):
+    """body = {"arguments": {"image_id": "..."}}. Renvoie le texte du prompt
+    et les ressources qu'il cite, déjà lues."""
+    prompt = next((p for p in state["prompts"] if p.name == name), None)
+    if prompt is None:
+        return JSONResponse({"detail": f"Prompt inconnu : {name}"}, status_code=404)
+
+    declared = {a.name for a in (prompt.arguments or [])}
+    args = {
+        k: str(v).strip()
+        for k, v in (body.get("arguments") or {}).items()
+        if k in declared and str(v).strip()
+    }
+    try:
+        result = await state["session"].get_prompt(name, args)
+    except Exception as e:
+        return JSONResponse({"detail": f"Prompt refusé : {e}"}, status_code=400)
+
+    text = prompt_text(result)
+    return {
+        "name": name,
+        "text": text,
+        "resources": await resolve_resources(state["session"], text),
+    }
+
+
+@app.get("/api/resources")
+async def resources():
+    return {
+        "resources": [
+            {
+                "uri": str(r.uri).rstrip("/"),
+                "name": r.name,
+                "description": r.description,
+            }
+            for r in state["resources"]
+        ],
+        "templates": [
+            {
+                "uri_template": attr(t, "uriTemplate", "uri_template"),
+                "name": t.name,
+                "description": t.description,
+                "params": re.findall(
+                    r"\{(\w+)\}", attr(t, "uriTemplate", "uri_template")
+                ),
+            }
+            for t in state["templates"]
+        ],
+    }
+
+
+@app.get("/api/resource")
+async def resource(uri: str):
+    if not RESOURCE_URI.match(uri):
+        return JSONResponse({"detail": "URI invalide"}, status_code=400)
+    try:
+        text = await read_resource(state["session"], uri)
+    except Exception:
+        return JSONResponse({"detail": "Ressource introuvable"}, status_code=404)
+    if not text or text.startswith(UNKNOWN):
+        return JSONResponse({"detail": text or "Ressource vide"}, status_code=404)
+    return {"uri": uri, "text": text}
 
 
 @app.post("/api/chat")
