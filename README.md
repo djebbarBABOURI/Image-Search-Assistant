@@ -45,13 +45,12 @@ Les images se retrouvent dans `data/images/`.
 
 ## Construire le cache
 
-Le serveur lit les prédictions dans `models/pets_cache.npz`. Ce fichier se génère une seule fois, depuis la racine du projet :
+Le serveur lit les prédictions dans `models/export.npz`. Ce fichier se génère une seule fois, depuis la racine du projet :
 
 ```powershell
-uv run --with-requirements requirements.txt python tools/build_cache.py
+uv run --with-requirements requirements.txt python -m src.training.export --run training_runs/7_sgd_100ep_final/finetune_seed2 --out data/export.npz
 ```
 
-Le calcul prend quelques minutes sur CPU. Relancez cette commande si vous changez de modèle ou si le contenu de `data/images/` change (supprimez d'abord `models/pets_cache.npz`).
 
 ## Lancement
 

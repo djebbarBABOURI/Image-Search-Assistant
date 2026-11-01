@@ -25,19 +25,46 @@ UPLOADS_DIR = Path(os.getenv("PETS_UPLOADS_DIR", ROOT / "data" / "uploads"))
 EXTS = {".jpg", ".jpeg", ".png"}
 CLASSES_PATH = ROOT / "models" / "classes.json"
 
-CLASSES = load_classes(CLASSES_PATH)
-CLASS_POS = {c.lower(): i for i, c in enumerate(CLASSES)}
+MODELS_DIR = ROOT / "models"
+EXPORT_CANDIDATES = [
+    "export.npz",
+    *[f"export_{mode}_sgd100_seed{s}.npz" for mode in ("finetune", "scratch") for s in range(5)],
+    "pets_cache.npz",
+]
+
+# Mettre un nom ici pour forcer un export précis (sinon None = détection automatique)
+EXPORT_FORCED: str | None = None
+def find_export() -> Path:
+    for name in ([EXPORT_FORCED] if EXPORT_FORCED else EXPORT_CANDIDATES):
+        p = MODELS_DIR / name
+        if p.exists():
+            return p
+    return MODELS_DIR / "export.npz" 
+
+
+EXPORT_PATH = find_export()
+
+CLASSES: list[str] = []      # rempli dans init() depuis l'export
+CLASS_POS: dict[str, int] = {}
+SPECIES: dict[str, str] = {}
 
 S: dict = {}
 
+
+def norm(label: str) -> str:
+    return label.strip().lower().replace(" ", "_")
+
+
+def species(name: str) -> str:
+    return SPECIES.get(name, "cat" if name[0].isupper() else "dog")
+
+
 def class_of(label: str):
-    return CLASS_POS.get(label.strip().lower().replace(" ", "_"))
+    return CLASS_POS.get(norm(label))
 
 
 def true_label(image_id: str):
     return class_of(image_id.rsplit("_", 1)[0])
-
-CACHE_PATH = ROOT / "models" / "pets_cache.npz"
 
 
 def build_cache() -> None:
@@ -92,23 +119,54 @@ def vec(image_id: str):
 
     probs, emb = S["up"][stem]
     return stem, probs, emb, None
+def pick(d, *names, required=True):
+    for n in names:
+        if n in d.files:
+            return d[n]
+    if required:
+        raise KeyError(f"Aucune des clés {names} dans {EXPORT_PATH}. Clés présentes : {d.files}")
+    return None
+
 
 def init() -> None:
-    if not CACHE_PATH.exists():
-        raise RuntimeError("Cache absent : lancez d'abord  uv run --with-requirements requirements.txt python tools/build_cache.py")
-    d = np.load(CACHE_PATH)
-    ids = [str(i) for i in d["ids"]]
-    emb = d["embs"]
+    if not EXPORT_PATH.exists():
+        raise RuntimeError(
+            f"Export absent : {EXPORT_PATH}. Lancez d'abord "
+            "uv run --with-requirements requirements.txt python -m src.training.export --run training_runs/7_sgd_100ep_final/finetune_seed2 --out data/export_finetune_sgd100_seed2.npz")
+    d = np.load(EXPORT_PATH, allow_pickle=False)
+
+    # Classes : export, sinon classes.json
+    raw_classes = pick(d, "class_names", "classes", required=False)
+    classes = [str(c) for c in raw_classes] if raw_classes is not None else load_classes(CLASSES_PATH)
+    CLASSES[:] = classes
+    CLASS_POS.clear()
+    CLASS_POS.update({norm(c): i for i, c in enumerate(classes)})
+
+    ids = [Path(str(p)).stem for p in pick(d, "image_paths", "paths", "ids")]
+    labels = pick(d, "labels", "label", "y", required=False)
+    probs = pick(d, "probs", "probabilities")
+    emb = pick(d, "embeddings", "embs", "emb").astype(np.float32)
+    split = pick(d, "split", "splits", required=False)
+
+    # Espèce déduite du nom de fichier (majuscule = chat)
+    SPECIES.clear()
+    for stem in ids:
+        c = class_of(stem.rsplit("_", 1)[0])
+        if c is not None:
+            SPECIES[classes[c]] = "cat" if stem[0].isupper() else "dog"
+
     S.update(
-        model=load_model(MODEL_PATH, len(CLASSES)),
+        model=load_model(MODEL_PATH, len(classes)),
         files=list_images(IMAGES_DIR),
         ids=ids,
-        probs=d["probs"],
+        probs=probs,
+        labels=labels,
+        split=split,
         pos={s: i for i, s in enumerate(ids)},
         embs=emb / np.linalg.norm(emb, axis=1, keepdims=True),
     )
     S["up"] = {}
-    log.info("Modèle chargé (%d classes), %d images dans %s", len(CLASSES), len(ids), IMAGES_DIR)
+    log.info("Export chargé (%d classes), %d images", len(classes), len(ids))
 
 def ensure_init() -> None:
     if not S:

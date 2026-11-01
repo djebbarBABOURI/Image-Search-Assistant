@@ -9,6 +9,7 @@ __pycache__/
 **/model.pt
 models/*.pt
 models/pets_cache.npz
+models/*.npz
 data/images/
 data/*.tar.gz
 data/oxford-iiit-pet/

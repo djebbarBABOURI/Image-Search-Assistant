@@ -53,8 +53,23 @@ def main():
     classes = results["classes"]
 
     model = build_model(results["mode"], len(classes))
-    model.load_state_dict(torch.load(run / "model.pt", map_location="cpu"))
+    # model.load_state_dict(torch.load(run / "model.pt", map_location="cpu"))
+    # Chercher d'abord le checkpoint dans le dossier du run, puis dans models/ si nécessaire.
+    model_path = run / "model.pt"
 
+    if not model_path.exists():
+        model_path = Path("models/model.pt")
+
+    if not model_path.exists():
+        raise FileNotFoundError(
+            f"Checkpoint introuvable : {run / 'model.pt'} "
+            "et models/model.pt"
+        )
+
+    print(f"Chargement du modèle : {model_path}")
+    model.load_state_dict(
+        torch.load(model_path, map_location="cpu", weights_only=True)
+    )
     eval_tf = transforms.Compose([
         transforms.Resize(256), transforms.CenterCrop(224),
         transforms.ToTensor(), transforms.Normalize(MEAN, STD),
