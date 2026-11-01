@@ -19,7 +19,7 @@ Serveur [MCP](https://modelcontextprotocol.io/) de classification d'images basé
 
 - Python 3.10 ou plus récent
 - [uv](https://docs.astral.sh/uv/)
-- Le modèle entraîné : `models/model.pt` (voir [Checkpoints et exports fournis](#checkpoints-et-exports-fournis))
+- Le modèle entraîné `models/model.pt` et le cache d'inférence `models/export.npz` (voir [Checkpoints et exports fournis](#checkpoints-et-exports-fournis) et [Construire le cache](#construire-le-cache))
 - Les images : `data/images/` (`.jpg`, `.jpeg`, `.png`)
 
 ## Installation
@@ -48,7 +48,7 @@ Les images se retrouvent dans `data/images/`.
 Le serveur lit les prédictions dans `models/export.npz`. Ce fichier se génère une seule fois, depuis la racine du projet :
 
 ```powershell
-uv run --with-requirements requirements.txt python -m src.training.export --run training_runs/7_sgd_100ep_final/finetune_seed2 --out data/export.npz
+uv run --with-requirements requirements.txt python -m src.training.export --run training_runs/7_sgd_100ep_final/finetune_seed2 --out models/export.npz
 ```
 
 
@@ -189,7 +189,7 @@ Avec Ollama et le serveur MCP lancés (mode 3, étapes 1 et 2), depuis la racine
 
 ```powershell
 uv run --with-requirements requirements.txt python src/chatbot/eval_queries.py
-uv run --with-requirements requirements.txt python src/chatbot/eval_queries.py --models qwen2.5:3b,llama3.2:3b
+uv run --with-requirements requirements.txt python src/chatbot/eval_queries.py --models qwen2.5:3b,qwen3:8b
 ```
 
 Options : `--models` (modèles séparés par des virgules), `--only 1,15,16` (sous-ensemble de requêtes), `--queries`, `--out-dir` (défaut `runs/chatbot/`). La température est fixée à 0 pour que les résultats soient reproductibles. Le script vérifie d'abord que les images citées existent dans la collection.
@@ -350,6 +350,7 @@ Le serveur MCP utilise `models/model.pt`, qui est le meilleur modèle (fine-tuni
 ```bash
 mkdir -p models
 cp training_runs/7_sgd_100ep_final/finetune_seed2/model.pt models/model.pt
+cp data/export_finetune_sgd100_seed2.npz models/export.npz
 ```
 
 Les résultats des expériences intermédiaires (dossiers 1 à 6 de `training_runs/`) sont versionnés dans leurs fichiers `results.json`. Leurs checkpoints ne sont pas fournis.
@@ -517,7 +518,7 @@ image-search-assistant/
 │   ├── oxford-iiit-pet/   dataset téléchargé par l'entraînement (non versionné)
 │   ├── export_<config>_seed<k>.npz   exports des modèles (non versionnés)
 │   └── pixels_32.npy      cache de la baseline pixels (généré)
-├── models/                model.pt, export.npz.npz (non versionnés)
+├── models/                model.pt, export.npz (non versionnés)
 ├── runs/                  résultats d'évaluation (runs/chatbot/ pour le chatbot)
 ├── training_runs/         résultats des entraînements (results.json), un dossier par expérience
 ├── src/

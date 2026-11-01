@@ -132,7 +132,7 @@ def init() -> None:
     if not EXPORT_PATH.exists():
         raise RuntimeError(
             f"Export absent : {EXPORT_PATH}. Lancez d'abord "
-            "uv run --with-requirements requirements.txt python -m src.training.export --run training_runs/7_sgd_100ep_final/finetune_seed2 --out data/export_finetune_sgd100_seed2.npz")
+            "uv run --with-requirements requirements.txt python -m src.training.export --run training_runs/7_sgd_100ep_final/finetune_seed2 --out models/export.npz")
     d = np.load(EXPORT_PATH, allow_pickle=False)
 
     # Classes : export, sinon classes.json
