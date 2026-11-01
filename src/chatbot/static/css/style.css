@@ -692,3 +692,111 @@ body {
         transition: none !important;
     }
 }
+
+/* Prompts et ressources MCP */
+.mcp-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.mcp-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: 1px solid var(--app-line);
+    border-radius: 0.65rem;
+    padding: 0.45rem 0.7rem;
+    color: var(--bs-body-color);
+    transition: border-color 0.15s, background-color 0.15s;
+}
+
+.mcp-item:hover {
+    border-color: var(--bs-primary);
+    background: var(--app-tool);
+}
+
+.mcp-item:focus-visible {
+    outline: 2px solid var(--bs-primary);
+    outline-offset: 2px;
+}
+
+.mcp-item>i {
+    color: var(--bs-primary);
+    margin-top: 0.1rem;
+}
+
+.mcp-item-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.mcp-item-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.mcp-item-sub {
+    font-size: 0.75rem;
+    color: var(--app-muted);
+    overflow-wrap: anywhere;
+}
+
+.mcp-item-sub.mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+#mcp-modal .modal-content {
+    background: var(--app-panel);
+    border-color: var(--app-line);
+}
+
+#mcp-modal .modal-header,
+#mcp-modal .modal-footer {
+    border-color: var(--app-line);
+}
+
+.mcp-content {
+    margin: 0.25rem 0 0;
+    padding: 0.7rem;
+    max-height: 320px;
+    overflow: auto;
+    border-radius: 0.5rem;
+    background: var(--app-tool);
+    border: 1px solid var(--app-line);
+    color: var(--bs-body-color);
+    font-size: 0.8rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.res-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.2rem 0.3rem 0.2rem 0.6rem;
+    border-radius: 99px;
+    border: 1px solid var(--app-line);
+    background: var(--app-tool);
+    font-size: 0.78rem;
+}
+
+.res-chip .btn-close {
+    font-size: 0.55rem;
+}
+
+.msg-meta {
+    margin: 0 0 0.25rem;
+    text-align: right;
+    font-size: 0.75rem;
+    color: var(--app-muted);
+    overflow-wrap: anywhere;
+}
+
+.msg-meta:not(:first-child) {
+    margin: 0.25rem 0 0;
+}

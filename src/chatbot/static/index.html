@@ -51,6 +51,19 @@
                         <span class="text-body-secondary small">Chargement…</span>
                     </div>
                 </section>
+                <section class="sb-section">
+                    <h2 class="sb-label">Prompts MCP</h2>
+                    <div id="prompts" class="mcp-list" aria-live="polite">
+                        <span class="text-body-secondary small">Chargement…</span>
+                    </div>
+                </section>
+
+                <section class="sb-section">
+                    <h2 class="sb-label">Ressources MCP</h2>
+                    <div id="resources" class="mcp-list" aria-live="polite">
+                        <span class="text-body-secondary small">Chargement…</span>
+                    </div>
+                </section>
             </div>
 
 
@@ -136,6 +149,22 @@
         </div>
     </div>
 
+    <div class="modal fade" id="mcp-modal" tabindex="-1" aria-labelledby="mcp-title" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title fs-6" id="mcp-title"></h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="mcp-desc" class="small text-body-secondary" hidden></p>
+                    <div id="mcp-fields"></div>
+                    <pre id="mcp-content" class="mcp-content" hidden></pre>
+                </div>
+                <div class="modal-footer" id="mcp-footer"></div>
+            </div>
+        </div>
+    </div>
     <div class="toast-container position-fixed top-0 end-0 p-3" id="toasts"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

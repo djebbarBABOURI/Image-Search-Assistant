@@ -123,7 +123,13 @@ Ouvrez ensuite http://localhost:8080.
 
 ### Prompts
 
-`find_look_alikes`, `identify_image`, `analyze_confusions`, `audit_low_confidence`, `breed_report`.
+| Prompt | Arguments | Rôle |
+|---|---|---|
+| `identify_image` | `image_id` | Identifie la race d'une image et la fiabilité de la prédiction |
+| `find_look_alikes` | `image_id` | Cherche les images proches et leurs races |
+| `analyze_confusions` | `label` | Analyse les confusions du modèle sur une race |
+| `audit_low_confidence` | `threshold` (optionnel) | Repère les races les plus incertaines |
+| `breed_report` | `label` | Rapport sur une race : volume, qualité, confusions, exemples |
 
 Les identifiants d'images sont les noms de fichier sans extension (ex. `Abyssinian_1`). La race « réelle » est déduite du nom de fichier.
 
@@ -148,6 +154,23 @@ Le modèle se télécharge une fois avec `ollama pull qwen2.5:3b`. L'interface w
 Le prompt système (`src/chatbot/config.py`) décrit les outils, le format des identifiants d'images (`Abyssinian_1`) et des races (`British_Shorthair`, `staffordshire_bull_terrier`), et demande de réutiliser le résultat d'un outil comme argument du suivant. La boucle (`src/chatbot/agent.py`) envoie la conversation et la liste des outils MCP à Ollama, exécute les appels demandés sur le serveur MCP, renvoie les résultats au LLM, et recommence jusqu'à une réponse sans appel (6 étapes au plus). C'est ce qui permet les requêtes qui enchaînent plusieurs outils.
 
 Côté usage, les races proches (bull terriers, Ragdoll et Birman, Basset Hound et Beagle) sont les plus souvent confondues : le modèle peut renvoyer un voisin de race voisine avec une similarité élevée.
+
+### Prompts, ressources et endpoints du client
+Endpoints exposés par le client (`src/chatbot/client.py`, port 8080) :
+
+| Méthode | Route | Rôle |
+|---|---|---|
+| GET | `/` | Interface web |
+| GET | `/static/...` | Fichiers statiques (CSS, JS) |
+| GET | `/api/tools` | Outils MCP visibles dans l'interface |
+| GET | `/api/models` | Modèles Ollama installés et modèle par défaut |
+| POST | `/api/chat` | Envoie la conversation à l'agent, renvoie la réponse et les appels d'outils |
+| POST | `/api/upload` | Enregistre une image envoyée (10 Mo max) et renvoie son `image_id` |
+| GET | `/api/image/{image_id}?size=thumb\|full` | Image de la collection ou téléversée |
+| GET | `/api/prompts` | Prompts MCP et leurs arguments |
+| POST | `/api/prompts/{nom}` | Exécute un prompt (`{"arguments": {...}}`), renvoie son texte et les ressources citées |
+| GET | `/api/resources` | Ressources MCP et modèles de ressources |
+| GET | `/api/resource?uri=pets://...` | Contenu d'une ressource |
 
 ### Jeu de requêtes de test
 
@@ -494,7 +517,7 @@ image-search-assistant/
 │   ├── oxford-iiit-pet/   dataset téléchargé par l'entraînement (non versionné)
 │   ├── export_<config>_seed<k>.npz   exports des modèles (non versionnés)
 │   └── pixels_32.npy      cache de la baseline pixels (généré)
-├── models/                model.pt, pets_cache.npz (non versionnés)
+├── models/                model.pt, export.npz.npz (non versionnés)
 ├── runs/                  résultats d'évaluation (runs/chatbot/ pour le chatbot)
 ├── training_runs/         résultats des entraînements (results.json), un dossier par expérience
 ├── src/

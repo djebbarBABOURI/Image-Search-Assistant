@@ -1,5 +1,5 @@
-/* Assistant Oxford Pets : client web avec gestion des images.
-   API utilisée : GET /api/models, GET /api/tools, POST /api/upload, POST /api/chat. */
+// API utilisée : GET /api/models, GET /api/tools, GET /api/prompts, POST /api/prompts/{nom},
+// GET /api/resources, GET /api/resource, POST /api/upload, POST /api/chat. */
 (() => {
     'use strict';
 
@@ -81,7 +81,15 @@
         drop: $('#drop'),
         lightboxEl: $('#lightbox'),
         lightboxImg: $('#lightbox-img'),
-        lightboxCap: $('#lightbox-cap')
+        lightboxCap: $('#lightbox-cap'),
+        prompts: $('#prompts'),
+        resources: $('#resources'),
+        mcpEl: $('#mcp-modal'),
+        mcpTitle: $('#mcp-title'),
+        mcpDesc: $('#mcp-desc'),
+        mcpFields: $('#mcp-fields'),
+        mcpContent: $('#mcp-content'),
+        mcpFooter: $('#mcp-footer')
     };
 
     const state = {
@@ -89,7 +97,8 @@
         busy: false,
         toolSeq: 0,
         image: null,
-        lastImage: null
+        lastImage: null,
+        resources: []
     };
 
     /* Notifications */
@@ -220,7 +229,312 @@
             );
         }
     }
+    /* Prompts et ressources MCP */
+    const PROMPT_INFO = {
+        identify_image: ['Identifier une image', 'Race, espèce et fiabilité de la prédiction', 'bullseye'],
+        find_look_alikes: ['Images similaires', 'Voisins visuels et leurs races', 'images'],
+        analyze_confusions: ['Analyser les confusions', 'Erreurs du modèle sur une race', 'shuffle'],
+        audit_low_confidence: ['Audit des faibles confiances', 'Races les plus incertaines', 'clipboard-check'],
+        breed_report: ['Rapport sur une race', 'Volume, qualité, confusions, exemples', 'file-earmark-text']
+    };
 
+    const RESOURCE_INFO = {
+        'pets://classes': ['Liste des races', 'list-ul'],
+        'pets://stats': ['Statistiques de la collection', 'graph-up'],
+        'pets://metrics': ['Métriques du modèle', 'speedometer2'],
+        'pets://image/{image_id}': ['Fiche d’une image', 'image'],
+        'pets://breed/{label}': ['Fiche d’une race', 'tag']
+    };
+
+    const FIELD_HINTS = {
+        image_id: 'ex. Abyssinian_1',
+        label: 'ex. Siamese',
+        threshold: 'ex. 0.5 (valeur par défaut si vide)'
+    };
+
+    const mcpModal = new bootstrap.Modal(els.mcpEl);
+    const hideSidebar = () =>
+        bootstrap.Offcanvas.getInstance($('#sidebar'))?.hide();
+
+    // Les races et les identifiants s'écrivent avec des _ (pas d'espaces).
+    const cleanValue = (name, value) =>
+        ['label', 'image_id'].includes(name)
+            ? value.trim().replace(/\s+/g, '_')
+            : value.trim();
+
+    function mcpItem(iconName, title, sub, onclick, mono = false) {
+        return h(
+            'button',
+            { type: 'button', class: 'mcp-item', onclick },
+            icon(iconName),
+            h(
+                'span',
+                { class: 'mcp-item-text' },
+                h('span', { class: 'mcp-item-title' }, title),
+                sub ? h('span', { class: `mcp-item-sub${mono ? ' mono' : ''}` }, sub) : null
+            )
+        );
+    }
+
+    function fieldInput(field) {
+        const id = `mcp-field-${field.name}`;
+        const current = state.image || state.lastImage;
+
+        return h(
+            'div',
+            { class: 'mb-3' },
+            h(
+                'label',
+                { class: 'form-label small fw-semibold', for: id },
+                field.name,
+                field.required ? ' *' : ''
+            ),
+            h('input', {
+                class: 'form-control form-control-sm',
+                type: 'text',
+                id,
+                name: field.name,
+                autocomplete: 'off',
+                list: field.name === 'label' ? 'breeds-list' : null,
+                value: field.name === 'image_id' && current ? current.id : '',
+                placeholder: FIELD_HINTS[field.name] || ''
+            })
+        );
+    }
+
+    /* Renvoie {nom: valeur} ou null si un champ obligatoire est vide. */
+    function collectFields(fields) {
+        const values = {};
+        let first = null;
+
+        for (const field of fields) {
+            const input = els.mcpFields.querySelector(`[name="${field.name}"]`);
+            const value = cleanValue(field.name, input.value);
+            const missing = field.required && !value;
+
+            input.classList.toggle('is-invalid', missing);
+            if (missing) first ??= input;
+            if (value) values[field.name] = value;
+        }
+
+        first?.focus();
+        return first ? null : values;
+    }
+
+    function openMcp({ title, desc = '', fields = [], actions = [], onOpen }) {
+        els.mcpTitle.textContent = title;
+        els.mcpDesc.textContent = desc;
+        els.mcpDesc.hidden = !desc;
+        els.mcpFields.replaceChildren(...fields.map(fieldInput));
+        els.mcpContent.hidden = true;
+        els.mcpContent.textContent = '';
+
+        els.mcpFooter.replaceChildren(
+            h('button', {
+                type: 'button',
+                class: 'btn btn-sm btn-outline-secondary',
+                'data-bs-dismiss': 'modal'
+            }, 'Fermer'),
+            ...actions.map((action) =>
+                h(
+                    'button',
+                    {
+                        type: 'button',
+                        class: `btn btn-sm ${action.primary ? 'btn-primary' : 'btn-outline-secondary'}`,
+                        onclick: async () => {
+                            const values = collectFields(fields);
+                            if (values) await action.run(values);
+                        }
+                    },
+                    icon(action.icon),
+                    h('span', { class: 'ms-1' }, action.label)
+                )
+            )
+        );
+
+        mcpModal.show();
+        onOpen?.();
+    }
+
+    els.mcpFields.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' && !event.isComposing) {
+            event.preventDefault();
+            els.mcpFooter.querySelector('.btn-primary')?.click();
+        }
+    });
+
+    /* Prompts */
+    function openPrompt(prompt, title, sub) {
+        if (!prompt.arguments.length) {
+            runPrompt(prompt, title, {});
+            return;
+        }
+
+        openMcp({
+            title,
+            desc: sub,
+            fields: prompt.arguments,
+            actions: [{
+                label: 'Lancer',
+                icon: 'play-fill',
+                primary: true,
+                run: (values) => runPrompt(prompt, title, values)
+            }]
+        });
+    }
+
+    async function runPrompt(prompt, title, values) {
+        if (state.busy) {
+            toast('Une réponse est déjà en cours.', 'warning');
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/prompts/${encodeURIComponent(prompt.name)}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ arguments: values })
+            });
+
+            if (!response.ok) {
+                throw new Error(await detail(response, `Erreur ${response.status}`));
+            }
+
+            const data = await response.json();
+            mcpModal.hide();
+            hideSidebar();
+            await send({ text: data.text, resources: data.resources || [], tag: title });
+        } catch (error) {
+            toast(error.message || 'Échec du prompt.');
+        }
+    }
+
+    /* Ressources */
+    const resolveUri = (template, values) =>
+        template.replace(/\{(\w+)\}/g, (_, key) => encodeURIComponent(values[key] ?? ''));
+
+    async function fetchResource(uri) {
+        const response = await fetch(`/api/resource?uri=${encodeURIComponent(uri)}`);
+
+        if (!response.ok) {
+            throw new Error(await detail(response, `Erreur ${response.status}`));
+        }
+
+        return response.json();
+    }
+
+    async function previewResource(uri) {
+        els.mcpContent.hidden = false;
+        els.mcpContent.textContent = 'Chargement…';
+
+        try {
+            els.mcpContent.textContent = (await fetchResource(uri)).text;
+        } catch (error) {
+            els.mcpContent.textContent = error.message;
+        }
+    }
+
+    async function attachResource(uri) {
+        try {
+            const data = await fetchResource(uri);
+
+            if (!state.resources.some((r) => r.uri === data.uri)) {
+                state.resources.push({ uri: data.uri, text: data.text });
+            }
+
+            renderPending();
+            mcpModal.hide();
+            hideSidebar();
+            toast(`${data.uri} sera joint à votre prochain message.`, 'success');
+            els.input.focus();
+        } catch (error) {
+            toast(error.message || 'Ressource indisponible.');
+        }
+    }
+
+    function openResource(resource, title) {
+        const template = resource.uri_template || resource.uri;
+        const fields = (resource.params || []).map((name) => ({ name, required: true }));
+
+        openMcp({
+            title,
+            desc: template,
+            fields,
+            actions: [
+                {
+                    label: 'Aperçu',
+                    icon: 'eye',
+                    run: (values) => previewResource(resolveUri(template, values))
+                },
+                {
+                    label: 'Joindre au message',
+                    icon: 'paperclip',
+                    primary: true,
+                    run: (values) => attachResource(resolveUri(template, values))
+                }
+            ],
+            // Sans paramètre, on affiche directement le contenu.
+            onOpen: () => { if (!fields.length) previewResource(template); }
+        });
+    }
+
+    /* Liste des races (ressource pets://classes) pour l'autocomplétion. */
+    async function loadBreeds() {
+        try {
+            const { text } = await fetchResource('pets://classes');
+            const names = text.split('\n').map((line) => line.split(' ')[0]).filter(Boolean);
+
+            document.body.append(
+                h('datalist', { id: 'breeds-list' }, names.map((n) => h('option', { value: n })))
+            );
+        } catch {
+            /* Pas d'autocomplétion. */
+        }
+    }
+
+    async function loadMcp() {
+        const unavailable = (box, text) =>
+            box.replaceChildren(h('span', { class: 'text-body-secondary small' }, text));
+
+        try {
+            const prompts = await getJSON('/api/prompts');
+
+            if (!prompts.length) throw new Error('vide');
+
+            els.prompts.replaceChildren(
+                ...prompts.map((p) => {
+                    const [title, sub, iconName] = PROMPT_INFO[p.name]
+                        || [pretty(p.name), p.description || '', 'chat-square-text'];
+
+                    return mcpItem(iconName, title, sub, () => openPrompt(p, title, sub));
+                })
+            );
+        } catch {
+            unavailable(els.prompts, 'Aucun prompt disponible.');
+        }
+
+        try {
+            const data = await getJSON('/api/resources');
+            const items = [
+                ...data.resources.map((r) => ({ ...r, key: r.uri })),
+                ...data.templates.map((t) => ({ ...t, key: t.uri_template, uri: null }))
+            ];
+
+            if (!items.length) throw new Error('vide');
+
+            els.resources.replaceChildren(
+                ...items.map((r) => {
+                    const [title, iconName] = RESOURCE_INFO[r.key]
+                        || [pretty(r.name), 'file-earmark-text'];
+
+                    return mcpItem(iconName, title, r.key, () => openResource(r, title), true);
+                })
+            );
+            loadBreeds();
+        } catch {
+            unavailable(els.resources, 'Aucune ressource disponible.');
+        }
+    }
     /* Lightbox et vignettes */
     const lightbox = new bootstrap.Modal(els.lightboxEl);
 
@@ -606,26 +920,46 @@
 
     function renderPending() {
         const img = state.image;
-        els.pending.hidden = !img;
+        const nodes = [];
 
-        if (!img) {
-            els.pending.replaceChildren();
-            return;
+        if (img) {
+            nodes.push(
+                h('img', { src: img.url, alt: '' }),
+                h('span', {}, img.name, ' · ', h('code', {}, img.id)),
+                h('button', {
+                    type: 'button',
+                    class: 'btn-close',
+                    'aria-label': 'Retirer l’image',
+                    onclick: () => {
+                        state.image = null;
+                        renderPending();
+                    }
+                })
+            );
         }
 
-        els.pending.replaceChildren(
-            h('img', { src: img.url, alt: '' }),
-            h('span', {}, img.name, ' · ', h('code', {}, img.id)),
-            h('button', {
-                type: 'button',
-                class: 'btn-close',
-                'aria-label': 'Retirer l’image',
-                onclick: () => {
-                    state.image = null;
-                    renderPending();
-                }
-            })
-        );
+        for (const res of state.resources) {
+            nodes.push(
+                h(
+                    'span',
+                    { class: 'res-chip' },
+                    icon('paperclip'),
+                    h('code', {}, res.uri),
+                    h('button', {
+                        type: 'button',
+                        class: 'btn-close',
+                        'aria-label': `Retirer ${res.uri}`,
+                        onclick: () => {
+                            state.resources = state.resources.filter((r) => r !== res);
+                            renderPending();
+                        }
+                    })
+                )
+            );
+        }
+
+        els.pending.hidden = !nodes.length;
+        els.pending.replaceChildren(...nodes);
     }
 
     function renderCurrent(img) {
@@ -673,13 +1007,17 @@
         return box;
     }
 
-    function addUser(text, image = null) {
+    function addUser(text, image = null, { tag = null, uris = [] } = {}) {
         els.messages.append(
             h(
                 'div',
                 { class: 'msg-user' },
+                tag ? h('div', { class: 'msg-meta' }, icon('lightning-charge'), ` Prompt MCP · ${tag}`) : null,
                 image ? h('img', { src: image.url, alt: image.name }) : null,
-                text ? h('div', { class: 'bubble' }, text) : null
+                text ? h('div', { class: 'bubble' }, text) : null,
+                uris.length
+                    ? h('div', { class: 'msg-meta' }, icon('paperclip'), ` ${uris.join(', ')}`)
+                    : null
             )
         );
 
@@ -748,32 +1086,24 @@
         els.send.setAttribute('aria-busy', String(busy));
     }
 
-    async function submit(event) {
-        event.preventDefault();
+    const resourceBlock = (resources) =>
+        resources.length
+            ? '\n\n[Ressources MCP]\n' +
+            resources.map((r) => `### ${r.uri}\n${r.text}`).join('\n\n')
+            : '';
 
-        if (state.busy) return;
-
-        const text = els.input.value.trim();
-        const image = state.image;
-        if (!text && !image) return;
-
+    async function send({ text, image = null, resources = [], tag = null }) {
         els.welcome.hidden = true;
-        addUser(text, image);
+        addUser(text, image, { tag, uris: resources.map((r) => r.uri) });
 
         state.history.push({
             role: 'user',
             content: (text || 'Quelle est la race de cet animal ?') +
-                (image ? `\n[image_id: ${image.id}]` : '')
+                (image ? `\n[image_id: ${image.id}]` : '') +
+                resourceBlock(resources)
         });
 
         if (image) state.lastImage = image;
-
-        els.input.value = '';
-        els.input.style.height = 'auto';
-
-        state.image = null;
-        renderPending();
-        renderCurrent(image);
 
         setBusy(true);
         const waiting = addBot({ typing: true });
@@ -797,10 +1127,8 @@
             const data = await response.json();
             waiting.remove();
 
-            const reply = data.reply || '(réponse vide)';
-
             addBot({
-                text: reply,
+                text: data.reply || '(réponse vide)',
                 tools: data.tools || []
             });
 
@@ -808,6 +1136,8 @@
                 role: 'assistant',
                 content: data.reply || ''
             });
+
+            return true;
         } catch (error) {
             waiting.remove();
 
@@ -817,11 +1147,43 @@
             });
 
             state.history.pop();
-            state.image = image;
-            renderPending();
+            return false;
         } finally {
             setBusy(false);
             els.input.focus();
+        }
+    }
+
+    async function submit(event) {
+        event.preventDefault();
+
+        if (state.busy) return;
+
+        const text = els.input.value.trim();
+        const image = state.image;
+        const resources = state.resources;
+
+        if (!text && !image) {
+            if (resources.length) {
+                toast('Écrivez une question pour utiliser la ressource jointe.', 'warning');
+            }
+            return;
+        }
+
+        els.input.value = '';
+        els.input.style.height = 'auto';
+
+        state.image = null;
+        state.resources = [];
+        renderPending();
+        renderCurrent(image);
+
+        const ok = await send({ text, image, resources });
+
+        if (!ok) {
+            if (image) state.image = image;
+            if (resources.length) state.resources = resources;
+            renderPending();
         }
     }
 
@@ -830,6 +1192,7 @@
 
         state.history = [];
         state.image = null;
+        state.resources = [];
         renderPending();
         renderCurrent(null);
 
@@ -918,6 +1281,7 @@
     /* Démarrage */
     renderCurrent(null);
     loadTools();
+    loadMcp();
     loadModels();
     els.input.focus();
 })();
